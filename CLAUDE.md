@@ -11,7 +11,9 @@ npm run dev           # node --watch server.js
 caddy run             # optional HTTPS frontend on :8443 → proxies to :3000
 ```
 
-No lint, no test, no build step — the frontend ships as-is. Inspect a running server via `GET /healthz` and `GET /api/stats`.
+No lint, no test, no build step — the frontend ships as-is. Inspect a running server via `GET /healthz` and `GET /api/stats`. Opt-in central harvest at `POST /api/recap` (stores `<RECAP_DIR>/<room>/<userId>.json`).
+
+Production deploy: `Dockerfile` + `fly.toml` target Fly.io regio `ams` with a `recaps` volume mounted at `/data`.
 
 ## Architecture
 

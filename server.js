@@ -5,11 +5,14 @@ import express from 'express';
 import { WebSocketServer } from 'ws';
 import http from 'node:http';
 import path from 'node:path';
+import fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
+const RECAP_DIR = process.env.RECAP_DIR || path.join(__dirname, 'recaps');
+const ROOM_CODE_RE = /^[A-Z0-9]{3,16}$/;
 
 const app = express();
 
@@ -62,6 +65,38 @@ app.get('/api/stats', (req, res) => {
   res.json({ rooms: stats, total: rooms.size });
 });
 
+// Opt-in central harvest. Each participant POSTs their own state from the
+// recap stage. Files land in RECAP_DIR/<roomCode>/<userId>.json — re-saves
+// from the same participant overwrite their previous file (latest wins).
+app.post('/api/recap', express.json({ limit: '512kb' }), async (req, res) => {
+  const body = req.body;
+  if (!body || typeof body !== 'object') {
+    return res.status(400).json({ ok: false, error: 'invalid body' });
+  }
+  const room = String(body.roomCode || '').trim().toUpperCase();
+  const userId = String(body.userId || '').trim();
+  if (!ROOM_CODE_RE.test(room)) {
+    return res.status(400).json({ ok: false, error: 'invalid roomCode' });
+  }
+  if (!/^[a-z0-9_]{3,40}$/.test(userId)) {
+    return res.status(400).json({ ok: false, error: 'invalid userId' });
+  }
+  const dir = path.join(RECAP_DIR, room);
+  const file = path.join(dir, `${userId}.json`);
+  const record = {
+    savedAt: new Date().toISOString(),
+    state: body
+  };
+  try {
+    await fs.mkdir(dir, { recursive: true });
+    await fs.writeFile(file, JSON.stringify(record, null, 2), 'utf8');
+    res.json({ ok: true, savedAt: record.savedAt });
+  } catch (err) {
+    console.error('recap save failed', err);
+    res.status(500).json({ ok: false, error: 'storage failure' });
+  }
+});
+
 // Default → index
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'ceda-workshop.html'));
@@ -91,12 +126,8 @@ wss.on('connection', (ws, req) => {
     const url = new URL(req.url, 'http://localhost');
     room = (url.searchParams.get('room') || '').trim().toUpperCase();
   } catch {}
-  if (!room || room.length < 3 || room.length > 16) {
+  if (!ROOM_CODE_RE.test(room)) {
     ws.close(1008, 'Invalid room code');
-    return;
-  }
-  if (!/^[A-Z0-9]+$/.test(room)) {
-    ws.close(1008, 'Invalid characters in room code');
     return;
   }
 

@@ -42,15 +42,61 @@ URL: https://localhost:8443
 - `GET /` → workshop-app
 - `GET /healthz` → `{ ok: true, rooms: N }`
 - `GET /api/stats` → aantal rooms + peers per room (geen content)
+- `POST /api/recap` → opt-in eindoogst opslaan (body = participant state JSON)
 - `WS /ws?room=<CODE>` → relay (broadcast naar andere peers in zelfde room)
 
-## Beveiliging
+## Beveiliging & privacy
 
 - Security-headers (CSP, HSTS, X-Frame-Options, Permissions-Policy) gezet in zowel Express als Caddy.
 - Geen authenticatie, geen DB. Sessiecode = enige toegangsdrempel.
-- Berichten worden niet gelogd of opgeslagen — alleen doorgegeven.
 - WebSocket-payload gelimiteerd op 64 KB; ongebruikte rooms worden direct opgeruimd.
 - Server-ping elke 30s — dode connecties worden beëindigd.
+- **Live-verkeer** wordt niet gelogd of opgeslagen — alleen doorgegeven.
+- **Eindoogst** wordt alleen centraal opgeslagen als een deelnemer in de recap-fase
+  expliciet op *Oogst opslaan voor analyse* klikt. Files belanden in `RECAP_DIR`
+  (default `./recaps`) als `<roomCode>/<userId>.json`. Communiceer dit vooraf
+  aan deelnemers.
+
+## Centrale oogst voor analyse
+
+Iedere deelnemer ziet aan het einde van de workshop een knop *Oogst opslaan voor analyse*.
+Klikken POST't de eigen JSON-state naar `POST /api/recap` en schrijft die naar disk.
+Per deelnemer wordt één bestand bewaard; herhaald opslaan overschrijft.
+
+Layout op disk:
+```
+recaps/
+  <ROOMCODE>/
+    u_xxxxx.json   # ← deelnemer 1, laatste save
+    u_yyyyy.json   # ← deelnemer 2, laatste save
+```
+
+Achteraf binnenhalen (Fly.io):
+```
+fly ssh console -C "tar -C /data/recaps -czf - ." > recaps-$(date +%F).tgz
+```
+
+## Productie-deployment
+
+### Fly.io (aanbevolen, regio Amsterdam)
+
+```
+fly auth login
+fly launch --copy-config --no-deploy
+fly volumes create recaps --region ams --size 1
+fly deploy
+```
+
+`fly.toml` mount het volume op `/data`; de server schrijft naar `/data/recaps`.
+
+### Eigen VPS
+
+1. Vervang in `Caddyfile` `localhost:8443` door je domein.
+2. Zorg voor DNS A-record + open poort 80/443.
+3. Draai Node als systemd-service of via `pm2`/`launchd`.
+4. Caddy regelt Let's Encrypt automatisch.
+
+Zie `README-caddy.md` voor uitgebreide HTTPS-instructies.
 
 ## Productie-deployment
 
