@@ -13,6 +13,26 @@ const PORT = Number(process.env.PORT) || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
 const RECAP_DIR = process.env.RECAP_DIR || path.join(__dirname, 'recaps');
 const ROOM_CODE_RE = /^[A-Z0-9]{3,16}$/;
+const USER_ID_RE = /^[A-Za-z0-9_-]{3,40}$/;
+
+// Probe at boot so a misconfigured volume fails fast instead of silently
+// breaking every save during a live workshop. Result is exposed via /healthz.
+let recapStorageOk = false;
+let recapStorageError = null;
+async function probeRecapStorage() {
+  try {
+    await fs.mkdir(RECAP_DIR, { recursive: true });
+    const probe = path.join(RECAP_DIR, '.write-probe');
+    await fs.writeFile(probe, String(Date.now()));
+    await fs.unlink(probe);
+    recapStorageOk = true;
+    console.log(`[recap] storage OK at ${RECAP_DIR}`);
+  } catch (err) {
+    recapStorageOk = false;
+    recapStorageError = `${err.code || 'ERR'}: ${err.message}`;
+    console.error(`[recap] FATAL: ${RECAP_DIR} is not writable —`, err);
+  }
+}
 
 const app = express();
 
@@ -53,8 +73,16 @@ app.use(
   })
 );
 
-// Health check
-app.get('/healthz', (req, res) => res.json({ ok: true, rooms: rooms.size }));
+// Health check — fails non-200 if recap storage is unavailable, so the
+// orchestrator (Fly health checks) notices a broken volume mount.
+app.get('/healthz', (req, res) => {
+  const ok = recapStorageOk;
+  res.status(ok ? 200 : 503).json({
+    ok,
+    rooms: rooms.size,
+    recapStorage: ok ? 'ok' : recapStorageError || 'unknown'
+  });
+});
 
 // Stats endpoint (read-only — only counts, no content)
 app.get('/api/stats', (req, res) => {
@@ -68,7 +96,12 @@ app.get('/api/stats', (req, res) => {
 // Opt-in central harvest. Each participant POSTs their own state from the
 // recap stage. Files land in RECAP_DIR/<roomCode>/<userId>.json — re-saves
 // from the same participant overwrite their previous file (latest wins).
+// Write is staged via a sibling .tmp file + rename so a crash mid-write
+// never replaces the previous good save with a truncated one.
 app.post('/api/recap', express.json({ limit: '512kb' }), async (req, res) => {
+  if (!recapStorageOk) {
+    return res.status(503).json({ ok: false, error: 'storage unavailable' });
+  }
   const body = req.body;
   if (!body || typeof body !== 'object') {
     return res.status(400).json({ ok: false, error: 'invalid body' });
@@ -78,21 +111,23 @@ app.post('/api/recap', express.json({ limit: '512kb' }), async (req, res) => {
   if (!ROOM_CODE_RE.test(room)) {
     return res.status(400).json({ ok: false, error: 'invalid roomCode' });
   }
-  if (!/^[a-z0-9_]{3,40}$/.test(userId)) {
+  if (!USER_ID_RE.test(userId)) {
     return res.status(400).json({ ok: false, error: 'invalid userId' });
   }
   const dir = path.join(RECAP_DIR, room);
   const file = path.join(dir, `${userId}.json`);
-  const record = {
-    savedAt: new Date().toISOString(),
-    state: body
-  };
+  const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
+  const record = { savedAt: new Date().toISOString(), state: body };
   try {
     await fs.mkdir(dir, { recursive: true });
-    await fs.writeFile(file, JSON.stringify(record, null, 2), 'utf8');
+    await fs.writeFile(tmp, JSON.stringify(record, null, 2), 'utf8');
+    await fs.rename(tmp, file);
     res.json({ ok: true, savedAt: record.savedAt });
   } catch (err) {
-    console.error('recap save failed', err);
+    console.error('[recap] save failed', {
+      room, userId, code: err.code, message: err.message
+    });
+    fs.unlink(tmp).catch(() => {});
     res.status(500).json({ ok: false, error: 'storage failure' });
   }
 });
@@ -167,6 +202,7 @@ const heartbeat = setInterval(() => {
 wss.on('close', () => clearInterval(heartbeat));
 
 // ---- Start ----
+await probeRecapStorage();
 server.listen(PORT, HOST, () => {
   const url = `http://localhost:${PORT}`;
   console.log('');

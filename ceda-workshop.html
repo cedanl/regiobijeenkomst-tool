@@ -3185,6 +3185,7 @@ document.getElementById('save-recap').addEventListener('click', async (e) => {
   }
   const btn = e.currentTarget;
   const original = btn.innerHTML;
+  const restore = () => { btn.innerHTML = original; btn.disabled = false; };
   btn.disabled = true;
   btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Opslaan…';
   try {
@@ -3197,16 +3198,21 @@ document.getElementById('save-recap').addEventListener('click', async (e) => {
     if (res.ok && data.ok) {
       toast('Oogst opgeslagen voor CEDA-analyse. Bedankt!');
       btn.innerHTML = '<i class="fa-solid fa-check"></i> Opgeslagen';
-      setTimeout(() => { btn.innerHTML = original; btn.disabled = false; }, 4000);
+      setTimeout(restore, 4000);
+    } else if (res.status >= 400 && res.status < 500) {
+      // 4xx: validation problem — retrying won't help, ask the user to escalate.
+      toast(`Opslaan geweigerd (${data.error || res.status}). Neem contact op met de facilitator.`);
+      restore();
     } else {
-      toast(`Opslaan mislukt: ${data.error || res.status}`);
-      btn.innerHTML = original;
-      btn.disabled = false;
+      // 5xx or unparseable response — retry is reasonable.
+      toast('Opslaan mislukt — probeer het zo opnieuw.');
+      restore();
     }
   } catch (err) {
-    toast(`Opslaan mislukt: ${err.message}`);
-    btn.innerHTML = original;
-    btn.disabled = false;
+    // Network failure (no response). Don't leak browser-specific strings.
+    console.error('[recap] save failed', err);
+    toast('Opslaan mislukt — controleer je verbinding en probeer opnieuw.');
+    restore();
   }
 });
 document.getElementById('export-text').addEventListener('click', () => {

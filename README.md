@@ -98,15 +98,6 @@ fly deploy
 
 Zie `README-caddy.md` voor uitgebreide HTTPS-instructies.
 
-## Productie-deployment
-
-1. Vervang in `Caddyfile` `localhost:8443` door je domein.
-2. Zorg voor DNS A-record + open poort 80/443.
-3. Draai Node als systemd-service of via `pm2`/`launchd`.
-4. Caddy regelt Let's Encrypt automatisch.
-
-Zie `README-caddy.md` voor uitgebreide HTTPS-instructies.
-
 ## Vereisten
 
 - Node.js ≥ 18

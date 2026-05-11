@@ -1,5 +1,6 @@
 # Fly.io deployment voor cedanl/regiobijeenkomst-tool
-# Setup eenmalig:
+# Setup eenmalig (`fly launch` is interactief — accepteer de app-naam en
+# regio uit dit bestand of overschrijf naar wens):
 #   1. fly auth login
 #   2. fly launch --copy-config --no-deploy        # neemt deze fly.toml over
 #   3. fly volumes create recaps --region ams --size 1   # 1 GB persistent
@@ -7,9 +8,12 @@
 # Daarna: nieuwe builds via `fly deploy`.
 #
 # Recaps ophalen voor analyse:
-#   fly ssh sftp shell        # interactief
-#   # of:
 #   fly ssh console -C "tar -C /data/recaps -czf - ." > recaps.tgz
+#
+# Let op: rooms zijn in-memory. min_machines_running = 1 voorkomt dat Fly de
+# VM stopt tijdens stillere momenten in een bijeenkomst (waardoor alle live
+# sessies zouden droppen). Voor zuinigheid kun je 'm op 0 zetten ná elke
+# bijeenkomst, en weer op 1 vóór de volgende.
 
 app = "ceda-regiobijeenkomst"
 primary_region = "ams"
@@ -30,7 +34,7 @@ primary_region = "ams"
   force_https = true
   auto_stop_machines = "stop"
   auto_start_machines = true
-  min_machines_running = 0
+  min_machines_running = 1
 
   [http_service.concurrency]
     type = "connections"
