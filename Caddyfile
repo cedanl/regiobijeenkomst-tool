@@ -1,0 +1,82 @@
+# =====================================================================
+# CEDA Regiobijeenkomst — Caddy webserver config
+# =====================================================================
+#
+# Caddy regelt automatisch HTTPS:
+#   - Lokaal:   eigen CA wordt op je systeem geïnstalleerd → vertrouwd cert voor https://localhost
+#   - Publiek:  Let's Encrypt cert wordt automatisch opgehaald én vernieuwd
+#
+# Snelstart lokaal:
+#   1. Open een terminal in deze map
+#   2. caddy run
+#   3. Open https://localhost
+#
+# Snelstart publiek:
+#   1. Vervang "localhost" hieronder door je domein, bv. workshop.ceda.surf.nl
+#   2. Zorg dat het domein via DNS naar je server-IP wijst
+#   3. Open poort 80 en 443 in je firewall
+#   4. caddy run  (of caddy start om in de achtergrond te draaien)
+#
+# Caddy installeren:
+#   macOS:    brew install caddy
+#   Linux:    https://caddyserver.com/docs/install
+#   Windows:  https://caddyserver.com/docs/install
+#
+# =====================================================================
+
+localhost:8443 {
+	# Compressie: 50–70% kleiner dan ongecomprimeerd
+	encode zstd gzip
+
+	# ---------------------------------------------------------------
+	# Beveiligingsheaders
+	# ---------------------------------------------------------------
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()"
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; connect-src 'self' ws: wss:; img-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self';"
+		Cross-Origin-Opener-Policy "same-origin"
+		Cross-Origin-Resource-Policy "same-origin"
+		-Server
+	}
+
+	# ---------------------------------------------------------------
+	# Reverse proxy naar de Node.js-server (HTTP + WebSocket)
+	# ---------------------------------------------------------------
+	reverse_proxy localhost:3000 {
+		# WebSocket-upgrade automatisch laten doorgaan
+		header_up Host {host}
+		header_up X-Real-IP {remote_host}
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-Proto {scheme}
+	}
+
+	log {
+		output stderr
+		format console
+		level INFO
+	}
+}
+
+# =====================================================================
+# Productie-template — uncomment + pas aan voor een publieke deployment
+# =====================================================================
+#
+# workshop.jouw-instelling.nl {
+#     encode zstd gzip
+#
+#     header {
+#         Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+#         X-Content-Type-Options "nosniff"
+#         X-Frame-Options "DENY"
+#         Referrer-Policy "strict-origin-when-cross-origin"
+#         Permissions-Policy "camera=(), microphone=(), geolocation=()"
+#         Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; connect-src 'self' wss:; img-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none';"
+#         -Server
+#     }
+#
+#     reverse_proxy localhost:3000
+# }

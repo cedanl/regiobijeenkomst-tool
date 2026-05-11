@@ -1,0 +1,3873 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CEDA Regiobijeenkomst — Van data naar inzicht</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<style>
+  /* -------- Npuls design tokens -------- */
+  :root {
+    --np-oranje: #DD784B;
+    --np-zwart:  #000000;
+    --np-roze:   #F4D9DC;
+    --np-blauw:  #3D68EC;
+    --np-geel:   #F4D74B;
+    --np-groen:  #00AF81;
+    --np-wit:    #FFFFFF;
+
+    --np-licht-groen:  #CCEEE6;
+    --np-licht-blauw:  #D6E2FD;
+    --np-licht-roze:   #FAEAEA;
+    --np-licht-oranje: #FFE4D8;
+    --np-licht-geel:   #FCF5D4;
+
+    --radius-s: 8px;
+    --radius-m: 16px;
+    --radius-l: 28px;
+    --radius-xl: 40px;
+
+    --shadow-s: 0 2px 6px rgba(0,0,0,0.06);
+    --shadow-m: 0 8px 24px rgba(0,0,0,0.08);
+    --shadow-l: 0 16px 48px rgba(0,0,0,0.12);
+
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 24px;
+    --space-6: 32px;
+    --space-7: 48px;
+    --space-8: 64px;
+    --space-9: 96px;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 1.5;
+    color: var(--np-zwart);
+    background: var(--np-wit);
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    font-weight: 600;
+    margin: 0;
+    line-height: 1.15;
+    letter-spacing: -0.015em;
+  }
+  h1 { font-size: clamp(40px, 6vw, 64px); font-weight: 700; }
+  h2 { font-size: clamp(28px, 3.6vw, 40px); }
+  h3 { font-size: clamp(20px, 2vw, 24px); }
+  p { margin: 0; }
+
+  .label {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  /* -------- Layout -------- */
+  .stage { width: 100%; min-height: 100vh; display: none; position: relative; }
+  .stage.active { display: block; }
+  .container { max-width: 1280px; margin: 0 auto; padding: 0 var(--space-6); }
+  @media (max-width: 720px) { .container { padding: 0 var(--space-4); } }
+
+  /* -------- HTTPS setup banner (file:// detectie) -------- */
+  .https-banner {
+    background: var(--np-licht-geel);
+    border-bottom: 2px solid var(--np-oranje);
+    padding: 10px 24px;
+    display: flex; align-items: center; gap: 14px;
+    font-size: 14px; line-height: 1.4;
+  }
+  .banner-icon {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--np-oranje); color: var(--np-wit);
+    display: grid; place-items: center; font-size: 13px;
+    flex-shrink: 0;
+  }
+  .banner-text { flex: 1; min-width: 0; }
+  .banner-text strong { font-weight: 700; }
+  .banner-text span { color: #444; margin-left: 6px; }
+  .banner-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .banner-btn {
+    padding: 6px 12px; border-radius: 999px;
+    font-family: inherit; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all 0.15s ease;
+    border: 1.5px solid var(--np-blauw);
+  }
+  .banner-btn-primary { background: var(--np-blauw); color: var(--np-wit); }
+  .banner-btn-primary:hover { background: var(--np-oranje); border-color: var(--np-oranje); }
+  .banner-btn-ghost { background: transparent; color: var(--np-blauw); border-color: rgba(61,104,236,0.3); }
+  .banner-btn-ghost:hover { background: var(--np-wit); border-color: var(--np-blauw); }
+  @media (max-width: 720px) {
+    .https-banner { padding: 8px 14px; font-size: 13px; }
+    .banner-text span { display: none; }
+  }
+
+  /* -------- HTTPS setup modal -------- */
+  .https-modal {
+    position: fixed; inset: 0; z-index: 200;
+    background: rgba(61,104,236,0.45);
+    backdrop-filter: blur(8px);
+    display: grid; place-items: center;
+    padding: var(--space-4);
+    animation: httpsFadeIn 0.25s ease-out;
+  }
+  @keyframes httpsFadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .https-modal-card {
+    background: var(--np-wit);
+    border-radius: var(--radius-l);
+    border: 2px solid var(--np-blauw);
+    padding: var(--space-6);
+    max-width: 620px; max-height: 90vh; overflow: auto;
+    position: relative;
+    box-shadow: var(--shadow-l);
+    animation: httpsPop 0.3s cubic-bezier(.25,.8,.4,1.2);
+  }
+  @keyframes httpsPop {
+    from { transform: scale(0.95); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  .https-modal-close {
+    position: absolute; top: 14px; right: 14px;
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--np-licht-blauw); border: none;
+    cursor: pointer; display: grid; place-items: center;
+    font-size: 14px; color: var(--np-blauw);
+  }
+  .https-modal-close:hover { background: var(--np-blauw); color: var(--np-wit); }
+  .https-eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--np-licht-blauw); color: var(--np-blauw);
+    padding: 6px 12px; border-radius: 999px;
+    font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+    margin-bottom: var(--space-3);
+  }
+  .https-modal-card h2 {
+    font-size: clamp(24px, 3vw, 32px);
+    line-height: 1.15; margin-bottom: var(--space-3);
+  }
+  .https-modal-card > p.https-lede {
+    font-size: 15px; line-height: 1.55; color: #333;
+    margin-bottom: var(--space-5);
+  }
+  .https-steps { display: flex; flex-direction: column; gap: 12px; margin-bottom: var(--space-5); }
+  .https-step {
+    display: flex; align-items: flex-start; gap: 14px;
+    padding: 12px 14px;
+    background: var(--np-licht-geel);
+    border-radius: var(--radius-m);
+  }
+  .https-step:nth-child(2) { background: var(--np-licht-blauw); }
+  .https-step:nth-child(3) { background: var(--np-licht-roze); }
+  .https-step:nth-child(4) { background: var(--np-licht-groen); }
+  .step-bubble {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: var(--np-blauw); color: var(--np-wit);
+    display: grid; place-items: center; font-weight: 700; font-size: 13px;
+    flex-shrink: 0;
+  }
+  .https-step:nth-child(2) .step-bubble { background: var(--np-oranje); }
+  .https-step:nth-child(3) .step-bubble { background: var(--np-groen); }
+  .https-step:nth-child(4) .step-bubble { background: var(--np-geel); color: var(--np-zwart); }
+  .https-step strong { display: block; font-size: 14px; margin-bottom: 2px; }
+  .https-step span { font-size: 13px; line-height: 1.45; color: #555; display: block; }
+  .https-step code, .https-tip code {
+    background: var(--np-wit); padding: 1px 7px; border-radius: 4px;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px;
+    border: 1px solid rgba(61,104,236,0.15);
+  }
+  .https-tip {
+    display: flex; align-items: flex-start; gap: 10px;
+    background: var(--np-licht-oranje);
+    border-radius: var(--radius-m);
+    padding: 12px 14px; font-size: 13px; line-height: 1.45;
+    margin-bottom: var(--space-5); color: #444;
+  }
+  .https-tip i { color: var(--np-oranje); font-size: 14px; margin-top: 2px; flex-shrink: 0; }
+  .https-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+  /* -------- Topbar (always visible after start) -------- */
+  .topbar {
+    position: sticky; top: 0; z-index: 50;
+    background: var(--np-wit);
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+    backdrop-filter: blur(8px);
+  }
+  .topbar-inner {
+    max-width: 1280px; margin: 0 auto;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: var(--space-3) var(--space-6); gap: var(--space-4);
+  }
+  .brand {
+    display: flex; align-items: center; gap: var(--space-3);
+    font-weight: 700; font-size: 18px;
+  }
+  .brand-mark {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--np-blauw);
+    display: grid; place-items: center; color: var(--np-geel);
+    font-weight: 700;
+    position: relative; flex-shrink: 0;
+  }
+  .brand-mark::before {
+    content: ''; position: absolute; inset: -6px;
+    border-radius: 50%; border: 2px solid var(--np-oranje);
+    opacity: 0.7;
+  }
+  .brand small { display: block; font-weight: 500; font-size: 12px; color: #555; letter-spacing: 0.04em; }
+  .brand strong { display: block; line-height: 1.1; }
+
+  .phase-pills { display: flex; gap: var(--space-2); flex: 1; justify-content: center; }
+  .pill {
+    padding: 8px 14px; border-radius: 999px;
+    font-size: 13px; font-weight: 600;
+    background: #f5f5f5; color: #555;
+    border: 1px solid transparent;
+    display: flex; align-items: center; gap: 8px;
+    cursor: pointer; transition: all 0.2s ease;
+    white-space: nowrap;
+  }
+  .pill .num {
+    width: 20px; height: 20px; border-radius: 50%;
+    background: rgba(0,0,0,0.08); color: #333;
+    display: grid; place-items: center; font-size: 11px; font-weight: 700;
+  }
+  .pill:hover { background: #ececec; }
+  .pill.done { background: var(--np-licht-groen); color: var(--np-zwart); }
+  .pill.done .num { background: var(--np-groen); color: var(--np-wit); }
+  .pill.current {
+    background: var(--np-blauw); color: var(--np-wit); border-color: var(--np-blauw);
+    box-shadow: 0 4px 12px rgba(61,104,236,0.3);
+  }
+  .pill.current .num { background: var(--np-geel); color: var(--np-zwart); }
+
+  @media (max-width: 880px) { .phase-pills { display: none; } }
+
+  .timer {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--np-blauw); color: var(--np-geel);
+    padding: 8px 16px; border-radius: 999px; font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer; user-select: none;
+  }
+  .timer i { color: var(--np-oranje); }
+  .timer:hover { transform: translateY(-1px); }
+
+  /* -------- Buttons -------- */
+  .btn {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 14px 24px; border-radius: 999px;
+    font-family: inherit; font-weight: 600; font-size: 15px;
+    border: 2px solid var(--np-blauw);
+    background: var(--np-blauw); color: var(--np-wit);
+    cursor: pointer; transition: all 0.2s ease;
+    text-decoration: none;
+  }
+  .btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-m); }
+  .btn-primary { background: var(--np-oranje); border-color: var(--np-oranje); color: var(--np-wit); }
+  .btn-blue    { background: var(--np-blauw);  border-color: var(--np-blauw);  color: var(--np-wit); }
+  .btn-yellow  { background: var(--np-geel);   border-color: var(--np-geel);   color: var(--np-zwart); }
+  .btn-green   { background: var(--np-groen);  border-color: var(--np-groen);  color: var(--np-wit); }
+  .btn-ghost   { background: transparent; color: var(--np-zwart); }
+  .btn-sm      { padding: 8px 14px; font-size: 13px; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+
+  /* -------- Welcome / Hero -------- */
+  .hero {
+    min-height: 100vh;
+    background: var(--np-blauw);
+    color: var(--np-wit);
+    position: relative; overflow: hidden;
+    display: flex; align-items: center;
+    padding: var(--space-9) 0;
+  }
+  .hero-bg-shape {
+    position: absolute; pointer-events: none;
+  }
+  .shape-rings-1 {
+    top: -120px; right: -160px; width: 520px; height: 520px;
+    opacity: 0.85;
+  }
+  .shape-rings-1 svg circle { fill: none; stroke: var(--np-geel); stroke-width: 8; }
+  .shape-burst-1 {
+    bottom: 80px; left: -60px; width: 220px; height: 220px;
+  }
+  .shape-pulse-1 {
+    bottom: -10px; right: 5%; width: 60%; height: 200px; opacity: 0.6;
+  }
+  .shape-pulse-1 svg path { fill: none; stroke: var(--np-roze); stroke-width: 14; stroke-linecap: round; }
+  .shape-bow-1 {
+    top: 30%; left: 38%; width: 180px; height: 180px;
+  }
+
+  .hero-content { position: relative; z-index: 2; max-width: 880px; }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: var(--np-geel); color: var(--np-zwart);
+    padding: 10px 18px; border-radius: 999px; font-weight: 600; font-size: 13px;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    margin-bottom: var(--space-5);
+  }
+  .eyebrow i { color: var(--np-oranje); }
+  .hero h1 { color: var(--np-wit); margin-bottom: var(--space-5); }
+  .hero h1 em { font-family: 'Plus Jakarta Sans', serif; font-style: italic; font-weight: 500; color: var(--np-geel); }
+  .hero-lead {
+    font-size: clamp(18px, 2vw, 22px); line-height: 1.5; max-width: 720px;
+    margin-bottom: var(--space-7); color: rgba(255,255,255,0.92);
+  }
+
+  .hero-cta { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; }
+  .hero-cta .btn-primary { padding: 18px 32px; font-size: 17px; }
+  .hero-cta .btn-ghost { color: var(--np-wit); border-color: rgba(255,255,255,0.4); }
+  .hero-cta .btn-ghost:hover { background: rgba(255,255,255,0.1); }
+
+  .hero-meta {
+    margin-top: var(--space-7);
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); max-width: 720px;
+  }
+  @media (max-width: 720px) { .hero-meta { grid-template-columns: 1fr; } }
+  .meta-card {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.18);
+    backdrop-filter: blur(8px);
+    border-radius: var(--radius-m);
+    padding: var(--space-4);
+  }
+  .meta-card .meta-icon {
+    width: 40px; height: 40px; border-radius: 50%;
+    display: grid; place-items: center; margin-bottom: var(--space-3);
+    background: var(--np-roze); color: var(--np-zwart);
+  }
+  .meta-card:nth-child(2) .meta-icon { background: var(--np-geel); }
+  .meta-card:nth-child(3) .meta-icon { background: var(--np-oranje); color: var(--np-wit); }
+  .meta-card .label { color: rgba(255,255,255,0.7); margin-bottom: 4px; display: block; }
+  .meta-card strong { font-size: 18px; font-weight: 600; color: var(--np-wit); }
+
+  /* Role selection */
+  .role-section {
+    background: var(--np-wit); padding: var(--space-9) 0;
+    position: relative;
+  }
+  .role-section .section-eyebrow {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: var(--np-licht-blauw); color: var(--np-blauw);
+    padding: 8px 16px; border-radius: 999px; font-size: 12px;
+    font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+    margin-bottom: var(--space-4);
+  }
+  .role-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-5);
+    margin-top: var(--space-6);
+  }
+  @media (max-width: 880px) { .role-grid { grid-template-columns: 1fr; } }
+  .role-card {
+    border: 2px solid var(--np-blauw);
+    border-radius: var(--radius-l);
+    padding: var(--space-5);
+    cursor: pointer;
+    transition: all 0.25s ease;
+    position: relative; overflow: hidden;
+    background: var(--np-wit);
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+    font-family: inherit;
+    color: var(--np-zwart);
+    height: 100%;
+  }
+  .role-card > p { min-height: 3em; }
+  .role-card .role-bullets { flex: 1 1 auto; }
+  .role-card .role-source { margin-top: auto; }
+  .role-card .role-icon {
+    width: 56px; height: 56px; border-radius: 50%;
+    display: grid; place-items: center; font-size: 22px;
+    margin-bottom: var(--space-4);
+  }
+  .role-card[data-role="praktijk"] { background: var(--np-licht-groen); }
+  .role-card[data-role="praktijk"] .role-icon { background: var(--np-groen); color: var(--np-wit); }
+  .role-card[data-role="aansturing"] { background: var(--np-licht-oranje); }
+  .role-card[data-role="aansturing"] .role-icon { background: var(--np-oranje); color: var(--np-wit); }
+  .role-card[data-role="ondersteuning"] { background: var(--np-licht-roze); }
+  .role-card[data-role="ondersteuning"] .role-icon { background: var(--np-blauw); color: var(--np-wit); }
+  .role-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-m); }
+  .role-card.selected {
+    box-shadow: 0 0 0 4px var(--np-blauw), var(--shadow-l);
+    transform: translateY(-4px);
+  }
+  .role-card h3 { margin-bottom: 6px; }
+  .role-card p { font-size: 14px; line-height: 1.5; }
+  .role-card-tag {
+    position: absolute; top: var(--space-4); right: var(--space-4);
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+    background: var(--np-blauw); color: var(--np-wit);
+    padding: 4px 10px; border-radius: 999px;
+  }
+
+  .agenda {
+    margin-top: var(--space-8);
+    background: var(--np-licht-geel);
+    border-radius: var(--radius-l);
+    padding: var(--space-6);
+    position: relative; overflow: hidden;
+  }
+  .agenda h3 { margin-bottom: var(--space-4); }
+  .agenda-list { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-4); }
+  @media (max-width: 880px) { .agenda-list { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 480px) { .agenda-list { grid-template-columns: 1fr; } }
+  .agenda-item {
+    background: var(--np-wit); padding: var(--space-4); border-radius: var(--radius-m);
+    border: 1px solid rgba(0,0,0,0.06);
+  }
+  .agenda-item .num {
+    width: 32px; height: 32px; border-radius: 50%;
+    display: grid; place-items: center; font-weight: 700; color: var(--np-wit);
+    margin-bottom: var(--space-3);
+  }
+  .agenda-item:nth-child(1) .num { background: var(--np-blauw); }
+  .agenda-item:nth-child(2) .num { background: var(--np-oranje); }
+  .agenda-item:nth-child(3) .num { background: var(--np-groen); }
+  .agenda-item:nth-child(4) .num { background: var(--np-blauw); color: var(--np-geel); }
+  .agenda-item h4 { font-size: 16px; margin-bottom: 4px; }
+  .agenda-item span { font-size: 13px; color: #555; }
+
+  /* -------- How it works (Apple/Airbnb-stijl scrollverhaal) -------- */
+  .howitworks {
+    background: var(--np-wit);
+    padding: var(--space-9) 0;
+    position: relative; overflow: hidden;
+  }
+  .howit-deco {
+    position: absolute; pointer-events: none; z-index: 0;
+  }
+  .howit-deco-1 { top: 200px; right: -120px; width: 360px; height: 360px; opacity: 0.45; }
+  .howit-deco-1 svg circle { fill: none; stroke: var(--np-licht-roze); stroke-width: 6; }
+  .howit-deco-2 {
+    bottom: 100px; left: -80px; width: 280px; height: 280px; opacity: 0.35;
+  }
+  .howit-deco-2 svg path { fill: none; stroke: var(--np-licht-blauw); stroke-width: 8; stroke-linecap: round; }
+
+  .howit-intro {
+    max-width: 820px; margin-bottom: var(--space-8);
+    position: relative; z-index: 1;
+  }
+  .howit-intro h2 {
+    font-size: clamp(36px, 5vw, 60px);
+    line-height: 1.05; letter-spacing: -0.02em;
+    margin-top: var(--space-3);
+  }
+  .howit-intro h2 em {
+    font-style: normal; background: var(--np-licht-geel);
+    padding: 0 10px; border-radius: 8px;
+  }
+  .howit-intro p.lead-large {
+    font-size: 19px; line-height: 1.55; color: #333;
+    margin-top: var(--space-5); max-width: 720px;
+  }
+
+  .howit-steps {
+    display: flex; flex-direction: column; gap: var(--space-9);
+    position: relative; z-index: 1;
+  }
+  .howit-step {
+    display: grid; grid-template-columns: 1fr 1.05fr;
+    gap: var(--space-7); align-items: center;
+  }
+  @media (max-width: 880px) {
+    .howit-step { grid-template-columns: 1fr; gap: var(--space-5); }
+  }
+  .howit-step.reverse > .howit-text { order: 2; }
+  .howit-step.reverse > .howit-visual { order: 1; }
+  @media (max-width: 880px) {
+    .howit-step.reverse > .howit-text { order: 1; }
+    .howit-step.reverse > .howit-visual { order: 2; }
+  }
+
+  .howit-text { padding: var(--space-3); }
+  .step-num {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+    padding: 8px 14px; border-radius: 999px;
+    margin-bottom: var(--space-4);
+  }
+  .step-num .step-digit { font-size: 16px; font-weight: 800; }
+  .howit-step[data-tone="green"]  .step-num { color: var(--np-zwart); background: var(--np-licht-groen); }
+  .howit-step[data-tone="blue"]   .step-num { color: var(--np-zwart); background: var(--np-licht-blauw); }
+  .howit-step[data-tone="orange"] .step-num { color: var(--np-zwart); background: var(--np-licht-oranje); }
+  .howit-step[data-tone="dark"]   .step-num { color: var(--np-geel);  background: var(--np-blauw); }
+
+  .howit-text h3 {
+    font-size: clamp(28px, 3.6vw, 46px); line-height: 1.05;
+    margin-bottom: var(--space-4); letter-spacing: -0.015em;
+  }
+  .howit-text p.step-desc {
+    font-size: 17px; line-height: 1.55; color: #333;
+    margin-bottom: var(--space-4); max-width: 480px;
+  }
+  .step-features {
+    list-style: none; padding: 0; margin: 0;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .step-features li {
+    display: flex; align-items: flex-start; gap: 12px;
+    font-size: 15px; line-height: 1.45; color: #333;
+  }
+  .step-features li i {
+    width: 26px; height: 26px; border-radius: 50%;
+    display: grid; place-items: center;
+    font-size: 11px; color: var(--np-wit);
+    flex-shrink: 0; margin-top: 1px;
+  }
+  .howit-step[data-tone="green"]  .step-features li i { background: var(--np-groen); }
+  .howit-step[data-tone="blue"]   .step-features li i { background: var(--np-blauw); }
+  .howit-step[data-tone="orange"] .step-features li i { background: var(--np-oranje); }
+  .howit-step[data-tone="dark"]   .step-features li i { background: var(--np-geel); color: var(--np-zwart); }
+
+  .howit-visual {
+    position: relative; aspect-ratio: 4 / 3;
+    border-radius: var(--radius-l); overflow: hidden;
+    padding: var(--space-5);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .howit-step[data-tone="green"]  .howit-visual { background: var(--np-licht-groen); }
+  .howit-step[data-tone="blue"]   .howit-visual { background: var(--np-licht-blauw); }
+  .howit-step[data-tone="orange"] .howit-visual { background: var(--np-licht-oranje); }
+  .howit-step[data-tone="dark"]   .howit-visual { background: var(--np-blauw); }
+
+  /* Reveal animation per step */
+  .howit-step .howit-text > *,
+  .howit-step .howit-visual .viz-anim {
+    opacity: 0; transform: translateY(20px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+  .howit-step.is-visible .howit-text > *,
+  .howit-step.is-visible .howit-visual .viz-anim {
+    opacity: 1; transform: translateY(0);
+  }
+  .howit-step.is-visible .howit-text > *:nth-child(1) { transition-delay: 0s; }
+  .howit-step.is-visible .howit-text > *:nth-child(2) { transition-delay: 0.08s; }
+  .howit-step.is-visible .howit-text > *:nth-child(3) { transition-delay: 0.16s; }
+  .howit-step.is-visible .howit-text > *:nth-child(4) { transition-delay: 0.24s; }
+  .howit-step.is-visible .viz-anim:nth-child(1) { transition-delay: 0.10s; }
+  .howit-step.is-visible .viz-anim:nth-child(2) { transition-delay: 0.20s; }
+  .howit-step.is-visible .viz-anim:nth-child(3) { transition-delay: 0.30s; }
+  .howit-step.is-visible .viz-anim:nth-child(4) { transition-delay: 0.40s; }
+  .howit-step.is-visible .viz-anim:nth-child(5) { transition-delay: 0.50s; }
+  .howit-step.is-visible .viz-anim:nth-child(6) { transition-delay: 0.60s; }
+
+  /* === Visuals: floating cards (step 1) === */
+  .viz-explore {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+    width: 100%; height: 100%;
+  }
+  .viz-col { display: flex; flex-direction: column; gap: 8px; }
+  .viz-tag {
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--np-zwart); background: var(--np-wit);
+    padding: 6px 10px; border-radius: 999px;
+    align-self: flex-start;
+    border: 1.5px solid rgba(0,0,0,0.1);
+  }
+  .viz-card {
+    padding: 10px 12px; border-radius: 12px;
+    font-size: 12px; line-height: 1.4;
+    border: 1.5px solid var(--np-blauw);
+    color: var(--np-zwart);
+    animation: floatY 4s ease-in-out infinite;
+  }
+  .viz-card:nth-child(odd) { animation-delay: 0.4s; }
+  .viz-card:nth-child(even) { animation-delay: 0.9s; }
+  .viz-yellow { background: var(--np-licht-geel); }
+  .viz-pink   { background: var(--np-licht-roze); }
+  .viz-blue   { background: var(--np-licht-blauw); }
+  .viz-orange { background: var(--np-licht-oranje); }
+  .viz-green  { background: var(--np-licht-groen); }
+
+  @keyframes floatY {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+  }
+
+  /* === Visuals: vote cards (step 2) === */
+  .viz-prioritize {
+    display: flex; flex-direction: column; gap: 10px; width: 100%;
+  }
+  .viz-vote-card {
+    background: var(--np-wit); border: 1.5px solid var(--np-blauw);
+    border-radius: 12px; padding: 12px; position: relative; overflow: hidden;
+  }
+  .viz-vote-text { font-size: 12px; font-weight: 600; margin-bottom: 8px; color: var(--np-zwart); }
+  .viz-vote-dots { display: flex; gap: 4px; }
+  .viz-vd {
+    width: 12px; height: 12px; border-radius: 50%; background: var(--np-blauw);
+    animation: popDot 0.5s ease-out backwards;
+  }
+  .viz-vote-card:nth-child(2) .viz-vd { background: var(--np-oranje); }
+  .viz-vote-card:nth-child(3) .viz-vd { background: var(--np-groen); }
+  .viz-vd:nth-child(1) { animation-delay: 0.5s; }
+  .viz-vd:nth-child(2) { animation-delay: 0.6s; }
+  .viz-vd:nth-child(3) { animation-delay: 0.7s; }
+  .viz-vd:nth-child(4) { animation-delay: 0.8s; }
+  @keyframes popDot {
+    from { transform: scale(0); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  .viz-vote-bar {
+    position: absolute; bottom: 0; left: 0; height: 4px;
+    background: var(--np-blauw);
+  }
+  .viz-vote-card:nth-child(2) .viz-vote-bar { background: var(--np-oranje); }
+  .viz-vote-card:nth-child(3) .viz-vote-bar { background: var(--np-groen); }
+
+  /* === Visuals: 2x2 canvas (step 3) === */
+  .viz-cases-canvas {
+    width: 100%; aspect-ratio: 4/3;
+    display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr;
+    gap: 8px;
+  }
+  .viz-cell {
+    border-radius: 12px; padding: 12px;
+    display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
+    background: var(--np-wit); border: 1.5px solid var(--np-blauw);
+  }
+  .viz-cell-icon {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: grid; place-items: center; color: var(--np-wit); font-size: 11px;
+  }
+  .viz-cell.tone-blue   .viz-cell-icon { background: var(--np-blauw); }
+  .viz-cell.tone-pink   .viz-cell-icon { background: var(--np-blauw); }
+  .viz-cell.tone-green  .viz-cell-icon { background: var(--np-groen); }
+  .viz-cell.tone-orange .viz-cell-icon { background: var(--np-oranje); }
+  .viz-cell-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--np-zwart); }
+  .viz-cell-line { width: 100%; height: 5px; border-radius: 999px; background: rgba(0,0,0,0.08); }
+  .viz-cell-line.short { width: 65%; }
+
+  /* === Privacy callout (na de stappen) === */
+  .privacy-card {
+    background: var(--np-licht-blauw);
+    border: 2px solid var(--np-blauw);
+    border-radius: var(--radius-l);
+    padding: var(--space-6);
+    margin-top: var(--space-9);
+    display: grid; grid-template-columns: 88px 1fr;
+    gap: var(--space-5); align-items: flex-start;
+    position: relative; overflow: hidden;
+  }
+  @media (max-width: 720px) {
+    .privacy-card { grid-template-columns: 1fr; padding: var(--space-5); }
+  }
+  .privacy-card-deco {
+    position: absolute; top: -40px; right: -40px; width: 200px; height: 200px;
+    opacity: 0.4; pointer-events: none;
+  }
+  .privacy-card-deco svg circle { fill: none; stroke: var(--np-blauw); stroke-width: 6; }
+  .privacy-icon-wrap {
+    width: 72px; height: 72px; border-radius: 50%;
+    background: var(--np-blauw); color: var(--np-wit);
+    display: grid; place-items: center; font-size: 28px;
+    flex-shrink: 0;
+    box-shadow: 0 0 0 6px rgba(255,255,255,0.7);
+  }
+  .privacy-content { position: relative; z-index: 1; }
+  .privacy-eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--np-blauw); margin-bottom: var(--space-3);
+    background: var(--np-wit); padding: 6px 12px; border-radius: 999px;
+  }
+  .privacy-content h3 {
+    font-size: clamp(22px, 2.6vw, 30px);
+    line-height: 1.2; margin-bottom: var(--space-3);
+    letter-spacing: -0.01em;
+  }
+  .privacy-content p.privacy-lede {
+    font-size: 16px; line-height: 1.55; color: #222;
+    margin-bottom: var(--space-4); max-width: 720px;
+  }
+  .privacy-promises {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-3);
+    margin-top: var(--space-3);
+  }
+  @media (max-width: 720px) { .privacy-promises { grid-template-columns: 1fr; } }
+  .privacy-promise {
+    display: flex; gap: 10px; align-items: flex-start;
+    font-size: 13px; line-height: 1.45; color: #222;
+    background: var(--np-wit);
+    padding: 12px 14px;
+    border-radius: var(--radius-m);
+    border: 1px solid rgba(0,0,0,0.06);
+  }
+  .privacy-promise i {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--np-groen); color: var(--np-wit);
+    display: grid; place-items: center; font-size: 10px;
+    flex-shrink: 0; margin-top: 1px;
+  }
+  .privacy-promise strong { display: block; font-weight: 700; margin-bottom: 2px; color: var(--np-zwart); }
+
+  /* === Visuals: recap stats (step 4) === */
+  .viz-recap {
+    display: flex; flex-direction: column; gap: 10px; width: 100%;
+  }
+  .viz-recap-stats {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  }
+  .viz-stat {
+    border-radius: 12px; padding: 12px; text-align: center;
+  }
+  .viz-stat-num { font-size: 28px; font-weight: 700; line-height: 1; margin-bottom: 4px; letter-spacing: -0.02em; }
+  .viz-stat-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.85; }
+  .viz-recap-list {
+    background: rgba(255,255,255,0.06); padding: 10px;
+    border-radius: 10px; border: 1px solid rgba(255,255,255,0.1);
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .viz-recap-row {
+    display: flex; align-items: center; gap: 8px; font-size: 11px;
+    color: rgba(255,255,255,0.95);
+  }
+  .viz-recap-row .check {
+    width: 14px; height: 14px; border-radius: 4px;
+    background: var(--np-groen); display: grid; place-items: center;
+    font-size: 8px; color: var(--np-wit); flex-shrink: 0;
+  }
+
+  /* -------- Session join section -------- */
+  .session-section {
+    background: var(--np-licht-roze);
+    padding: var(--space-9) 0 var(--space-7);
+    position: relative; overflow: hidden;
+  }
+  .session-deco {
+    position: absolute; top: -60px; right: -60px; width: 280px; height: 280px;
+    opacity: 0.4; pointer-events: none;
+  }
+  .session-deco svg path { fill: none; stroke: var(--np-blauw); stroke-width: 10; stroke-linecap: round; }
+  .session-section .lead { font-size: 18px; color: #444; max-width: 720px; margin-top: var(--space-3); }
+  .session-card {
+    background: var(--np-wit); border: 2px solid var(--np-blauw);
+    border-radius: var(--radius-l); padding: var(--space-6);
+    margin-top: var(--space-5);
+    display: flex; flex-direction: column; gap: var(--space-4);
+    position: relative; z-index: 1;
+    max-width: 760px;
+  }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field-label { font-size: 13px; font-weight: 700; color: #333; text-transform: uppercase; letter-spacing: 0.06em; }
+  .field input {
+    padding: 14px 16px; border: 2px solid var(--np-blauw);
+    border-radius: var(--radius-m); font-family: inherit; font-size: 16px;
+    outline: none; transition: border-color 0.2s ease; width: 100%;
+    background: var(--np-wit); color: var(--np-zwart);
+  }
+  .field input:focus { border-color: var(--np-blauw); }
+  .code-input-wrap { display: flex; gap: 8px; align-items: stretch; flex-wrap: wrap; }
+  .code-input-wrap input { flex: 1; min-width: 160px; text-transform: uppercase; letter-spacing: 0.25em; font-weight: 700; font-size: 18px; text-align: center; }
+  .code-input-wrap .btn { white-space: nowrap; }
+  .session-mode { display: flex; gap: 8px; flex-wrap: wrap; }
+  .mode-btn {
+    padding: 12px 18px; border-radius: 999px; font-family: inherit;
+    font-size: 14px; font-weight: 600;
+    border: 2px solid var(--np-blauw); background: var(--np-wit); color: var(--np-zwart);
+    cursor: pointer; transition: all 0.2s ease;
+    display: flex; align-items: center; gap: 8px;
+    flex: 1; justify-content: center;
+  }
+  .mode-btn.active { background: var(--np-blauw); color: var(--np-wit); }
+  .mode-btn:hover:not(.active) { background: var(--np-licht-geel); }
+  .code-display {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    padding: var(--space-4); background: var(--np-licht-geel); border-radius: var(--radius-m);
+  }
+  .code-pill {
+    padding: 12px 24px; border-radius: 999px;
+    background: var(--np-geel); color: var(--np-zwart);
+    font-size: 22px; font-weight: 700; letter-spacing: 0.3em;
+    border: 2px solid var(--np-blauw);
+  }
+  .session-status {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-size: 13px; padding: 8px 14px; border-radius: 999px;
+    background: rgba(0,0,0,0.04); align-self: flex-start;
+    font-weight: 600;
+  }
+  .status-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: rgba(61,104,236,0.3); flex-shrink: 0;
+  }
+  .session-status.connected { background: var(--np-licht-groen); color: var(--np-zwart); }
+  .session-status.connected .status-dot { background: var(--np-groen); animation: pulseDot 2s ease-in-out infinite; }
+  .session-status.connecting { background: var(--np-licht-blauw); color: var(--np-zwart); }
+  .session-status.connecting .status-dot { background: var(--np-blauw); animation: pulseDot 1s ease-in-out infinite; }
+  .session-status.failed { background: var(--np-licht-oranje); color: var(--np-zwart); }
+  .session-status.failed .status-dot { background: var(--np-oranje); }
+  @keyframes pulseDot {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(0,175,129,0.6); }
+    50% { box-shadow: 0 0 0 8px rgba(0,175,129,0); }
+  }
+
+  /* -------- Topbar participants cluster -------- */
+  .participants-cluster {
+    display: flex; align-items: center; gap: 8px;
+    padding: 4px 10px; background: var(--np-licht-blauw);
+    border-radius: 999px; font-size: 12px; font-weight: 600;
+  }
+  .conn-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--np-groen); flex-shrink: 0;
+  }
+  .conn-dot.disconnected { background: rgba(61,104,236,0.25); }
+  .avatars-list { display: flex; align-items: center; padding-right: 4px; }
+  .avatar {
+    width: 26px; height: 26px; border-radius: 50%;
+    display: grid; place-items: center;
+    font-size: 10px; font-weight: 700; color: var(--np-wit);
+    margin-left: -8px; border: 2px solid var(--np-wit);
+    flex-shrink: 0;
+  }
+  .avatar:first-child { margin-left: 0; }
+  .avatar.more { background: var(--np-blauw); color: var(--np-wit); }
+  .room-pill {
+    font-family: monospace; font-size: 12px; font-weight: 700;
+    letter-spacing: 0.15em; color: var(--np-blauw);
+    padding-left: 4px; border-left: 1px solid rgba(0,0,0,0.1);
+  }
+  @media (max-width: 880px) {
+    .participants-cluster .room-pill { display: none; }
+  }
+
+  /* Author chip on insight cards */
+  .card-author {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 600; color: rgba(0,0,0,0.6);
+  }
+  .avatar-mini {
+    width: 18px; height: 18px; border-radius: 50%;
+    display: grid; place-items: center;
+    font-size: 9px; font-weight: 700; color: var(--np-wit);
+    flex-shrink: 0;
+  }
+
+  /* -------- Role card bullets & source -------- */
+  .role-bullets {
+    list-style: none; padding: 0; margin: var(--space-4) 0 var(--space-3);
+    display: flex; flex-direction: column; gap: 8px;
+    text-align: left;
+  }
+  .role-bullets li {
+    display: flex; align-items: flex-start; gap: 10px;
+    font-size: 13px; line-height: 1.4; color: var(--np-zwart);
+  }
+  .role-bullets li i {
+    margin-top: 1px; font-size: 11px;
+    width: 22px; height: 22px; border-radius: 50%;
+    display: grid; place-items: center; flex-shrink: 0;
+    background: var(--np-wit); color: var(--np-zwart);
+  }
+  .role-source {
+    display: block; font-size: 11px; color: rgba(0,0,0,0.55);
+    margin-top: var(--space-3); padding-top: var(--space-3);
+    border-top: 1px dashed rgba(0,0,0,0.15);
+    text-align: left; font-style: italic;
+  }
+
+  /* -------- Inspire panel (Phase 1) -------- */
+  .inspire-panel {
+    background: var(--np-wit);
+    border-radius: var(--radius-l);
+    border: 2px solid var(--np-blauw);
+    padding: var(--space-5);
+    margin: var(--space-5) 0;
+    position: relative; overflow: hidden;
+  }
+  .inspire-deco {
+    position: absolute; top: -40px; right: -40px; width: 180px; height: 180px;
+    opacity: 0.7; pointer-events: none;
+  }
+  .inspire-deco svg circle { fill: none; stroke: var(--np-licht-blauw); stroke-width: 6; }
+  .inspire-head {
+    display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4);
+    flex-wrap: wrap; margin-bottom: var(--space-4);
+    position: relative; z-index: 1;
+  }
+  .inspire-title { display: flex; align-items: flex-start; gap: 14px; max-width: 520px; }
+  .inspire-icon {
+    width: 48px; height: 48px; border-radius: 50%;
+    background: var(--np-geel); color: var(--np-zwart);
+    display: grid; place-items: center; font-size: 18px;
+    flex-shrink: 0;
+  }
+  .inspire-title h3 { font-size: 20px; line-height: 1.3; margin-top: 6px; }
+  .inspire-title .label { color: var(--np-blauw); display: block; margin-bottom: 4px; }
+  .inspire-title p { font-size: 13px; color: #555; margin-top: 6px; line-height: 1.45; }
+  .inspire-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+  .inspire-tab {
+    padding: 10px 16px; border-radius: 999px; font-family: inherit;
+    font-size: 13px; font-weight: 600;
+    border: 2px solid var(--np-blauw); background: var(--np-wit); color: var(--np-zwart);
+    cursor: pointer; transition: all 0.2s ease;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .inspire-tab.active { background: var(--np-blauw); color: var(--np-wit); }
+  .inspire-tab:hover:not(.active) { background: var(--np-licht-geel); }
+  .persona-meta {
+    display: flex; align-items: center; gap: 10px; margin-bottom: var(--space-4);
+    padding: 12px 14px; background: var(--np-licht-blauw); border-radius: var(--radius-m);
+    font-size: 13px; line-height: 1.45;
+    position: relative; z-index: 1;
+  }
+  .persona-meta i { color: var(--np-blauw); font-size: 14px; }
+  .persona-meta strong { color: var(--np-zwart); }
+  .inspire-body {
+    display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-5);
+    position: relative; z-index: 1;
+  }
+  @media (max-width: 720px) { .inspire-body { grid-template-columns: 1fr; } }
+  .inspire-side h4 {
+    font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+    margin-bottom: 10px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .inspire-side[data-type="kans"] h4 { color: var(--np-blauw); }
+  .inspire-side[data-type="uitdaging"] h4 { color: var(--np-oranje); }
+  .inspire-side h4 i {
+    width: 22px; height: 22px; border-radius: 50%;
+    display: grid; place-items: center; font-size: 10px;
+    color: var(--np-wit);
+  }
+  .inspire-side[data-type="kans"] h4 i { background: var(--np-blauw); }
+  .inspire-side[data-type="uitdaging"] h4 i { background: var(--np-oranje); }
+  .chip-list { display: flex; flex-direction: column; gap: 8px; }
+  .chip {
+    font-family: inherit; font-size: 13px; line-height: 1.4;
+    text-align: left; padding: 10px 14px; border-radius: var(--radius-m);
+    border: 1.5px solid rgba(0,0,0,0.12);
+    cursor: pointer; transition: all 0.15s ease;
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
+    color: var(--np-zwart);
+  }
+  .chip-text { flex: 1; }
+  .chip i { color: var(--np-blauw); opacity: 0.5; font-size: 12px; flex-shrink: 0; margin-top: 3px; transition: all 0.15s ease; }
+  .chip:hover { border-color: var(--np-blauw); transform: translateX(2px); box-shadow: var(--shadow-s); }
+  .chip:hover i { color: var(--np-blauw); transform: translateX(2px); }
+  .chip-list[data-type="kans"] .chip { background: var(--np-licht-geel); }
+  .chip-list[data-type="uitdaging"] .chip { background: var(--np-licht-oranje); }
+  .chip-list[data-type="kans"] .chip:hover { background: var(--np-geel); }
+  .chip-list[data-type="uitdaging"] .chip:hover { background: var(--np-licht-roze); }
+  .inspire-footer {
+    margin-top: var(--space-4); padding-top: var(--space-4);
+    border-top: 1px dashed rgba(0,0,0,0.1);
+    font-size: 12px; color: #666;
+    display: flex; align-items: center; gap: 8px;
+    position: relative; z-index: 1;
+  }
+  .inspire-footer i { color: var(--np-blauw); }
+  .inspire-footer a { color: var(--np-blauw); text-decoration: underline; }
+
+  /* -------- Generic stage header -------- */
+  .stage-header {
+    padding: var(--space-7) 0 var(--space-5);
+    position: relative;
+  }
+  .stage-header h2 { margin-bottom: var(--space-3); max-width: 800px; }
+  .stage-header .lead { font-size: 18px; line-height: 1.5; max-width: 760px; color: #444; }
+  .stage-header .stage-eyebrow {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 8px 16px; border-radius: 999px; font-size: 12px;
+    font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+    margin-bottom: var(--space-4);
+  }
+
+  /* -------- Stage 1: Verkennen -------- */
+  #stage-explore { background: var(--np-licht-groen); }
+  #stage-explore .stage-eyebrow { background: var(--np-groen); color: var(--np-wit); }
+
+  .explore-columns {
+    display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-5);
+    margin: var(--space-5) 0 var(--space-7);
+  }
+  @media (max-width: 880px) { .explore-columns { grid-template-columns: 1fr; } }
+  .explore-column {
+    background: var(--np-wit);
+    border-radius: var(--radius-l);
+    padding: var(--space-5);
+    min-height: 480px;
+    border: 1px solid rgba(0,0,0,0.05);
+  }
+  .explore-column-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: var(--space-4); padding-bottom: var(--space-4);
+    border-bottom: 1px dashed rgba(0,0,0,0.1);
+  }
+  .explore-column-head .head-left { display: flex; align-items: center; gap: 12px; }
+  .explore-column-head .head-icon {
+    width: 44px; height: 44px; border-radius: 50%;
+    display: grid; place-items: center; font-size: 18px;
+  }
+  .explore-column[data-type="kans"] .head-icon { background: var(--np-geel); color: var(--np-zwart); }
+  .explore-column[data-type="uitdaging"] .head-icon { background: var(--np-oranje); color: var(--np-wit); }
+  .explore-column h3 { font-size: 22px; }
+  .count-badge {
+    background: var(--np-blauw); color: var(--np-wit);
+    width: 32px; height: 32px; border-radius: 50%;
+    display: grid; place-items: center; font-size: 13px; font-weight: 700;
+  }
+
+  .add-input {
+    display: flex; flex-direction: column; gap: 10px;
+    margin-bottom: var(--space-4);
+  }
+  .add-input textarea {
+    width: 100%; resize: none; padding: 14px 16px;
+    border: 2px solid var(--np-blauw); border-radius: var(--radius-m);
+    font-family: inherit; font-size: 15px;
+    outline: none; transition: border-color 0.2s ease;
+    min-height: 80px;
+  }
+  .add-input textarea:focus { border-color: var(--np-blauw); }
+  .add-input-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    flex-wrap: wrap;
+  }
+  .role-tag-group {
+    display: flex; gap: 6px; flex-wrap: wrap;
+  }
+  .role-tag {
+    padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 600;
+    border: 1.5px solid #ddd; background: var(--np-wit); cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .role-tag.active {
+    background: var(--np-blauw); color: var(--np-wit); border-color: var(--np-blauw);
+  }
+
+  .card-list {
+    display: flex; flex-direction: column; gap: var(--space-3);
+    max-height: 480px; overflow-y: auto; padding-right: 4px;
+  }
+  .card-list::-webkit-scrollbar { width: 6px; }
+  .card-list::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 999px; }
+
+  .insight-card {
+    padding: var(--space-4);
+    border-radius: var(--radius-m);
+    border: 2px solid var(--np-blauw);
+    background: var(--np-wit);
+    position: relative;
+    animation: cardPop 0.4s cubic-bezier(.25,.8,.4,1.2);
+  }
+  @keyframes cardPop {
+    from { opacity: 0; transform: translateY(8px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .insight-card.color-yellow { background: var(--np-licht-geel); }
+  .insight-card.color-pink   { background: var(--np-licht-roze); }
+  .insight-card.color-blue   { background: var(--np-licht-blauw); }
+  .insight-card.color-orange { background: var(--np-licht-oranje); }
+  .insight-card.color-green  { background: var(--np-licht-groen); }
+
+  .insight-card .card-text { font-size: 15px; line-height: 1.45; margin-bottom: var(--space-3); white-space: pre-wrap; word-wrap: break-word; }
+  .card-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .card-role-tag {
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+    padding: 4px 10px; border-radius: 999px;
+    background: var(--np-blauw); color: var(--np-wit);
+  }
+  .card-role-tag[data-role="praktijk"] { background: var(--np-groen); }
+  .card-role-tag[data-role="aansturing"] { background: var(--np-oranje); }
+  .card-role-tag[data-role="ondersteuning"] { background: var(--np-blauw); }
+
+  .card-actions { display: flex; gap: 4px; }
+  .card-actions button {
+    width: 28px; height: 28px; border-radius: 50%;
+    border: none; background: rgba(0,0,0,0.06);
+    cursor: pointer; display: grid; place-items: center;
+    color: #444; transition: all 0.15s ease;
+  }
+  .card-actions button:hover { background: var(--np-blauw); color: var(--np-wit); }
+
+  .empty-state {
+    padding: var(--space-6); text-align: center; color: #888;
+    border: 2px dashed rgba(0,0,0,0.15); border-radius: var(--radius-m);
+    font-size: 14px;
+  }
+
+  .stage-footer {
+    background: var(--np-blauw); color: var(--np-wit);
+    border-radius: var(--radius-l);
+    padding: var(--space-5);
+    display: flex; align-items: center; justify-content: space-between; gap: var(--space-4);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-7);
+  }
+  /* On licht-blauw stage (prioritize) flip to oranje to keep contrast */
+  #stage-prioritize .stage-footer { background: var(--np-oranje); }
+  #stage-prioritize .stage-footer .next-info strong { color: var(--np-geel); }
+  /* Avoid oranje-button-on-oranje-footer; use geel instead */
+  #stage-prioritize .stage-footer .btn-primary {
+    background: var(--np-geel); border-color: var(--np-geel); color: var(--np-zwart);
+  }
+  #stage-prioritize .stage-footer .btn-primary:hover { background: var(--np-wit); border-color: var(--np-wit); }
+  .stage-footer .next-info { font-size: 14px; opacity: 0.92; max-width: 480px; }
+  .stage-footer .next-info strong { display: block; font-size: 18px; color: var(--np-geel); margin-bottom: 4px; }
+
+  /* -------- Stage 2: Prioriteren -------- */
+  #stage-prioritize { background: var(--np-licht-blauw); }
+  #stage-prioritize .stage-eyebrow { background: var(--np-blauw); color: var(--np-wit); }
+
+  .vote-meter {
+    background: var(--np-wit); border-radius: var(--radius-l);
+    padding: var(--space-5); margin: var(--space-5) 0 var(--space-7);
+    display: flex; align-items: center; justify-content: space-between; gap: var(--space-4);
+    flex-wrap: wrap;
+    border: 2px solid var(--np-blauw);
+  }
+  .vote-meter .meter-left { display: flex; align-items: center; gap: var(--space-4); }
+  .vote-budget { display: flex; gap: 6px; }
+  .vote-dot {
+    width: 24px; height: 24px; border-radius: 50%;
+    background: var(--np-blauw);
+    transition: all 0.3s ease;
+  }
+  .vote-dot.spent { background: rgba(0,0,0,0.1); }
+
+  .vote-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--space-4); margin-bottom: var(--space-7);
+  }
+  .vote-card {
+    background: var(--np-wit); border: 2px solid var(--np-blauw);
+    border-radius: var(--radius-m); padding: var(--space-4);
+    position: relative;
+    cursor: pointer; transition: all 0.2s ease;
+    display: flex; flex-direction: column; gap: var(--space-3);
+  }
+  .vote-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-m); }
+  .vote-card.maxed { background: var(--np-licht-geel); border-color: var(--np-oranje); }
+
+  .vote-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .type-tag {
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+    padding: 4px 10px; border-radius: 999px;
+  }
+  .type-tag[data-type="kans"] { background: var(--np-geel); color: var(--np-zwart); }
+  .type-tag[data-type="uitdaging"] { background: var(--np-oranje); color: var(--np-wit); }
+
+  .vote-card-text { font-size: 15px; line-height: 1.45; flex: 1; }
+
+  .vote-controls {
+    display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
+    padding-top: var(--space-3); border-top: 1px dashed rgba(0,0,0,0.1);
+  }
+  .vote-btn {
+    width: 36px; height: 36px; border-radius: 50%;
+    border: 2px solid var(--np-blauw); background: var(--np-wit);
+    display: grid; place-items: center; cursor: pointer;
+    font-size: 14px; transition: all 0.15s ease;
+  }
+  .vote-btn:hover { background: var(--np-oranje); color: var(--np-wit); border-color: var(--np-oranje); }
+  .vote-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .vote-btn.add { background: var(--np-blauw); color: var(--np-wit); border-color: var(--np-blauw); }
+  .vote-btn.add:hover { background: var(--np-oranje); border-color: var(--np-oranje); }
+
+  .vote-count {
+    font-size: 28px; font-weight: 700; color: var(--np-zwart);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .vote-count i { color: var(--np-oranje); font-size: 16px; }
+
+  .vote-fill {
+    position: absolute; bottom: 0; left: 0;
+    height: 6px; background: var(--np-blauw);
+    transition: width 0.4s ease;
+    border-radius: 0 0 var(--radius-m) var(--radius-m);
+  }
+
+  .vote-empty {
+    background: var(--np-wit); border: 2px dashed rgba(61,104,236,0.3);
+    border-radius: var(--radius-l); padding: var(--space-7); text-align: center;
+  }
+  .vote-empty i { font-size: 36px; color: var(--np-blauw); margin-bottom: var(--space-3); }
+
+  /* -------- Use case intro / anatomie -------- */
+  .usecase-intro {
+    background: var(--np-wit);
+    border: 2px solid var(--np-blauw);
+    border-radius: var(--radius-l);
+    padding: var(--space-6);
+    margin: var(--space-5) 0 var(--space-6);
+    position: relative; overflow: hidden;
+  }
+  .usecase-intro-deco {
+    position: absolute; top: -40px; right: -40px; width: 200px; height: 200px;
+    opacity: 0.3; pointer-events: none;
+  }
+  .usecase-intro-deco svg { width: 100%; height: 100%; }
+  .usecase-intro-deco svg circle { fill: none; stroke: var(--np-oranje); stroke-width: 8; }
+  .usecase-intro-head {
+    display: flex; align-items: center; gap: 14px;
+    margin-bottom: var(--space-4);
+    position: relative; z-index: 1;
+  }
+  .usecase-intro-head .intro-icon {
+    width: 48px; height: 48px; border-radius: 50%;
+    background: var(--np-oranje); color: var(--np-wit);
+    display: grid; place-items: center; font-size: 18px;
+    flex-shrink: 0;
+  }
+  .usecase-intro-head h3 { font-size: 22px; line-height: 1.25; }
+  .usecase-intro p.lede { font-size: 16px; line-height: 1.55; max-width: 760px; margin-bottom: var(--space-5); position: relative; z-index: 1; }
+  .usecase-intro p.lede strong { background: var(--np-licht-geel); padding: 0 4px; border-radius: 3px; }
+
+  .usecase-anatomy {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-3);
+    margin-bottom: var(--space-5);
+    position: relative; z-index: 1;
+  }
+  @media (max-width: 880px) { .usecase-anatomy { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 480px) { .usecase-anatomy { grid-template-columns: 1fr; } }
+  .anatomy-item {
+    background: var(--np-licht-geel); padding: var(--space-4);
+    border-radius: var(--radius-m);
+    display: flex; flex-direction: column; gap: 8px;
+    border: 1px solid rgba(0,0,0,0.05);
+  }
+  .anatomy-item.tone-blue { background: var(--np-licht-blauw); }
+  .anatomy-item.tone-pink { background: var(--np-licht-roze); }
+  .anatomy-item.tone-green { background: var(--np-licht-groen); }
+  .anatomy-item.tone-orange { background: var(--np-licht-oranje); }
+  .anatomy-icon {
+    width: 36px; height: 36px; border-radius: 50%;
+    display: grid; place-items: center; font-size: 14px; color: var(--np-wit);
+  }
+  .anatomy-item.tone-blue .anatomy-icon { background: var(--np-blauw); }
+  .anatomy-item.tone-pink .anatomy-icon { background: var(--np-blauw); }
+  .anatomy-item.tone-green .anatomy-icon { background: var(--np-groen); }
+  .anatomy-item.tone-orange .anatomy-icon { background: var(--np-oranje); }
+  .anatomy-item h4 { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+  .anatomy-item p { font-size: 13px; line-height: 1.45; color: #444; margin: 0; }
+
+  .usecase-example {
+    background: var(--np-blauw); color: var(--np-wit);
+    border-radius: var(--radius-m); padding: var(--space-5);
+    position: relative; z-index: 1;
+  }
+  .usecase-example .example-label {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+    background: var(--np-geel); color: var(--np-zwart);
+    padding: 4px 10px; border-radius: 999px;
+    margin-bottom: var(--space-3);
+  }
+  .usecase-example p {
+    font-size: 17px; line-height: 1.55; color: rgba(255,255,255,0.95);
+    margin: 0;
+  }
+  .example-mark {
+    padding: 1px 6px; border-radius: 4px; font-weight: 600;
+    color: var(--np-zwart); white-space: normal;
+  }
+  .example-mark[data-kind="actor"] { background: var(--np-roze); }
+  .example-mark[data-kind="doel"] { background: var(--np-geel); }
+  .example-mark[data-kind="resultaat"] { background: var(--np-licht-groen); }
+  .example-mark::after {
+    content: attr(data-label); font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    background: var(--np-oranje); color: var(--np-wit);
+    padding: 2px 6px; border-radius: 999px;
+    margin-left: 6px; vertical-align: middle;
+  }
+
+  /* -------- Stage 3: Use cases -------- */
+  #stage-cases { background: var(--np-licht-oranje); }
+  #stage-cases .stage-eyebrow { background: var(--np-oranje); color: var(--np-wit); }
+
+  .case-pick {
+    background: var(--np-wit); border-radius: var(--radius-l);
+    padding: var(--space-5); margin: var(--space-5) 0 var(--space-7);
+    border: 2px solid var(--np-blauw);
+  }
+  .case-pick h3 { margin-bottom: var(--space-4); }
+  .pick-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--space-3); }
+  .pick-card {
+    border: 2px solid var(--np-blauw); border-radius: var(--radius-m);
+    padding: var(--space-4); cursor: pointer; position: relative;
+    transition: all 0.2s ease; background: var(--np-wit);
+  }
+  .pick-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-s); }
+  .pick-card.selected { background: var(--np-blauw); color: var(--np-wit); }
+  .pick-card .pick-text { font-size: 14px; line-height: 1.4; margin-bottom: 8px; }
+  .pick-card .pick-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .pick-card .pick-votes {
+    display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600;
+  }
+
+  .case-canvases { display: flex; flex-direction: column; gap: var(--space-5); }
+  .case-canvas {
+    background: var(--np-wit); border-radius: var(--radius-l);
+    padding: var(--space-5);
+    border: 2px solid var(--np-blauw);
+    position: relative; overflow: hidden;
+  }
+  .canvas-head {
+    display: flex; align-items: flex-start; gap: var(--space-4);
+    padding-bottom: var(--space-4); margin-bottom: var(--space-5);
+    border-bottom: 1px dashed rgba(0,0,0,0.12);
+  }
+  .canvas-num {
+    width: 48px; height: 48px; border-radius: 50%;
+    background: var(--np-oranje); color: var(--np-wit);
+    display: grid; place-items: center; font-size: 20px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .canvas-title { flex: 1; }
+  .canvas-title h3 { margin-bottom: 4px; font-size: 20px; line-height: 1.3; }
+  .canvas-title .label { color: #555; }
+
+  .canvas-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-4);
+  }
+  @media (max-width: 720px) { .canvas-grid { grid-template-columns: 1fr; } }
+  .canvas-field {
+    background: var(--np-licht-geel); border-radius: var(--radius-m);
+    padding: var(--space-4);
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .canvas-field.field-blue   { background: var(--np-licht-blauw); }
+  .canvas-field.field-pink   { background: var(--np-licht-roze); }
+  .canvas-field.field-green  { background: var(--np-licht-groen); }
+  .canvas-field.field-orange { background: var(--np-licht-oranje); }
+
+  .canvas-field-head { display: flex; align-items: center; gap: 10px; }
+  .typing-indicator {
+    margin-left: auto; display: flex; align-items: center; gap: 6px;
+    font-size: 11px; color: #555; min-height: 22px; flex-wrap: wrap;
+  }
+  .typing-indicator.active { color: var(--np-blauw); }
+  .typing-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 8px 3px 4px; background: var(--np-wit);
+    border: 1px solid rgba(0,0,0,0.1);
+    border-radius: 999px; font-size: 11px; font-weight: 600;
+    color: var(--np-zwart);
+    animation: typingPulse 1.2s ease-in-out infinite;
+  }
+  .typing-chip .typing-dot {
+    display: inline-block; width: 5px; height: 5px; border-radius: 50%;
+    background: var(--np-blauw);
+    animation: typingDotBlink 0.9s ease-in-out infinite;
+    margin-left: 2px;
+  }
+  @keyframes typingPulse {
+    0%, 100% { opacity: 0.85; }
+    50% { opacity: 1; }
+  }
+  @keyframes typingDotBlink {
+    0%, 100% { transform: scale(0.7); opacity: 0.5; }
+    50% { transform: scale(1.1); opacity: 1; }
+  }
+  .canvas-field-icon {
+    width: 36px; height: 36px; border-radius: 50%;
+    display: grid; place-items: center; font-size: 14px;
+    color: var(--np-wit);
+  }
+  .field-blue .canvas-field-icon  { background: var(--np-blauw); }
+  .field-pink .canvas-field-icon  { background: var(--np-blauw); }
+  .field-green .canvas-field-icon { background: var(--np-groen); }
+  .field-orange .canvas-field-icon{ background: var(--np-oranje); }
+  .canvas-field-head h4 { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+  .canvas-field textarea {
+    width: 100%; resize: vertical; padding: 12px 14px; min-height: 90px;
+    border: 1.5px solid rgba(0,0,0,0.12); border-radius: var(--radius-s);
+    font-family: inherit; font-size: 14px; line-height: 1.5; background: var(--np-wit);
+    outline: none; transition: border-color 0.2s ease;
+  }
+  .canvas-field textarea:focus { border-color: var(--np-blauw); }
+
+  /* -------- Stage 4: Recap -------- */
+  #stage-recap { background: var(--np-blauw); color: var(--np-wit); min-height: 100vh; }
+  #stage-recap .stage-eyebrow { background: var(--np-geel); color: var(--np-zwart); }
+  #stage-recap .stage-header h2 { color: var(--np-wit); }
+  #stage-recap .stage-header .lead { color: rgba(255,255,255,0.75); }
+
+  .recap-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); margin: var(--space-5) 0 var(--space-7); }
+  @media (max-width: 720px) { .recap-grid { grid-template-columns: 1fr; } }
+  .stat-card {
+    border-radius: var(--radius-l);
+    padding: var(--space-5);
+    position: relative; overflow: hidden;
+  }
+  .stat-card[data-tone="blue"]   { background: var(--np-blauw);  color: var(--np-wit); }
+  .stat-card[data-tone="yellow"] { background: var(--np-geel);   color: var(--np-zwart); }
+  .stat-card[data-tone="orange"] { background: var(--np-oranje); color: var(--np-wit); }
+  .stat-card[data-tone="green"]  { background: var(--np-groen);  color: var(--np-wit); }
+  .stat-card[data-tone="pink"]   { background: var(--np-roze);   color: var(--np-zwart); }
+
+  .stat-num { font-size: 64px; font-weight: 700; line-height: 1; margin-bottom: 8px; letter-spacing: -0.04em; }
+  .stat-label { font-size: 16px; font-weight: 500; opacity: 0.9; }
+  .stat-card .stat-shape { position: absolute; right: -20px; top: -20px; width: 100px; height: 100px; opacity: 0.18; }
+
+  .recap-cases { display: flex; flex-direction: column; gap: var(--space-4); margin-bottom: var(--space-7); }
+  .recap-case {
+    background: rgba(255,255,255,0.12);
+    border: 1.5px solid rgba(255,255,255,0.32);
+    border-radius: var(--radius-l);
+    padding: var(--space-5);
+  }
+  .recap-case h3 { color: var(--np-wit); margin-bottom: var(--space-3); }
+  .recap-case .item-meta { color: rgba(255,255,255,0.6); font-size: 13px; margin-bottom: var(--space-4); }
+  .recap-fields { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-3); }
+  @media (max-width: 720px) { .recap-fields { grid-template-columns: 1fr; } }
+  .recap-field {
+    background: rgba(255,255,255,0.04); border-radius: var(--radius-m);
+    padding: var(--space-3) var(--space-4);
+    border-left: 3px solid var(--np-geel);
+  }
+  .recap-field:nth-child(1) { border-left-color: var(--np-geel); }
+  .recap-field:nth-child(2) { border-left-color: var(--np-roze); }
+  .recap-field:nth-child(3) { border-left-color: var(--np-groen); }
+  .recap-field:nth-child(4) { border-left-color: var(--np-oranje); }
+  .recap-field .label { color: rgba(255,255,255,0.55); margin-bottom: 4px; display: block; }
+  .recap-field p { color: rgba(255,255,255,0.95); white-space: pre-wrap; }
+
+  .actions-bar {
+    display: flex; gap: var(--space-3); flex-wrap: wrap; padding: var(--space-7) 0;
+    border-top: 1px solid rgba(255,255,255,0.15);
+  }
+  .actions-bar .btn-ghost { color: var(--np-wit); border-color: rgba(255,255,255,0.4); }
+  .actions-bar .btn-ghost:hover { background: rgba(255,255,255,0.1); }
+
+  /* Decorative shapes (SVG inline placement helpers) */
+  .deco { position: absolute; pointer-events: none; z-index: 0; }
+  .stage-content { position: relative; z-index: 1; }
+
+  /* Reveal animation */
+  .reveal { opacity: 0; transform: translateY(16px); transition: opacity .6s ease, transform .6s ease; }
+  .reveal.is-visible { opacity: 1; transform: translateY(0); }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(40px);
+    background: var(--np-blauw); color: var(--np-wit);
+    padding: 12px 20px; border-radius: 999px; font-weight: 600; font-size: 14px;
+    box-shadow: var(--shadow-l); opacity: 0; transition: all 0.3s ease;
+    z-index: 100; display: flex; align-items: center; gap: 10px;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast i { color: var(--np-geel); }
+
+  /* Scroll indicator */
+  .scroll-indicator { position: absolute; bottom: 32px; left: 50%; transform: translateX(-50%); color: var(--np-wit); font-size: 24px; animation: bobble 1.6s ease-in-out infinite; }
+  @keyframes bobble { 0%,100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(8px); } }
+
+  /* Print styles */
+  @media print {
+    .topbar, .actions-bar, .stage-footer, .scroll-indicator { display: none !important; }
+    body { background: white; color: black; }
+    .stage { display: block !important; page-break-after: always; }
+  }
+</style>
+</head>
+<body>
+
+<!-- =========== HTTPS BANNER (shown only on file:// or http://) =========== -->
+<div id="https-banner" class="https-banner" style="display:none;">
+  <div class="banner-icon"><i class="fa-solid fa-shield-halved"></i></div>
+  <div class="banner-text">
+    <strong>Je draait nu zonder HTTPS.</strong>
+    <span>1 dubbelklik op de launcher = beveiligde versie met geldig certificaat en alle security-headers.</span>
+  </div>
+  <div class="banner-actions">
+    <button class="banner-btn banner-btn-primary" id="banner-howto"><i class="fa-solid fa-bolt"></i> Activeer beveiligde versie</button>
+    <button class="banner-btn banner-btn-ghost" id="banner-dismiss" title="Sluiten"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+</div>
+
+<!-- =========== HTTPS MODAL =========== -->
+<div id="https-modal" class="https-modal" style="display:none;">
+  <div class="https-modal-card">
+    <button class="https-modal-close" id="modal-close" aria-label="Sluiten"><i class="fa-solid fa-xmark"></i></button>
+    <span class="https-eyebrow"><i class="fa-solid fa-lock"></i> 1 dubbelklik · geen technische kennis</span>
+    <h2>Start de Node.js-server.</h2>
+    <p class="https-lede">
+      In de map waar dit bestand staat ligt een launcher. Hij installeert dependencies (eenmalig), start de Node-server, en opent je browser op <code>http://localhost:3000</code>. Voor volledige HTTPS zet je Caddy ervoor — dat regelt het launcher-script automatisch.
+    </p>
+
+    <div class="https-steps">
+      <div class="https-step">
+        <span class="step-bubble">1</span>
+        <div>
+          <strong>Open de werkmap in Finder.</strong>
+          <span>Dezelfde map waar dit HTML-bestand staat — meestal <code>CEDA | Regiobijeenkomst - Tool</code> op je Bureaublad.</span>
+        </div>
+      </div>
+      <div class="https-step">
+        <span class="step-bubble">2</span>
+        <div>
+          <strong>Dubbelklik op <code>Start Workshop.command</code></strong>
+          <span>Een Terminal opent. Eerste keer: <code>npm install</code> draait (~30 sec) en optioneel installeert het script Caddy voor HTTPS.</span>
+        </div>
+      </div>
+      <div class="https-step">
+        <span class="step-bubble">3</span>
+        <div>
+          <strong>Wacht tot je browser opent.</strong>
+          <span>De Node-server start op poort 3000, Caddy zet er HTTPS voor op poort 8443 (als geïnstalleerd).</span>
+        </div>
+      </div>
+      <div class="https-step">
+        <span class="step-bubble">4</span>
+        <div>
+          <strong>Klaar — je werkt nu via een eigen server.</strong>
+          <span>Live-sync loopt via WebSocket op je eigen machine, niet meer via publieke brokers. Sluit Terminal om alles te stoppen.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="https-tip">
+      <i class="fa-solid fa-circle-info"></i>
+      <span>Node.js niet geïnstalleerd? De launcher meldt het en wijst je door. Installeer via <code>brew install node</code> of <a href="https://nodejs.org" target="_blank" rel="noopener">nodejs.org</a>.</span>
+    </div>
+
+    <div class="https-actions">
+      <button class="btn btn-primary" id="try-localhost"><i class="fa-solid fa-arrow-right"></i> Probeer http://localhost:3000</button>
+      <button class="btn btn-ghost" id="modal-dismiss">Toch verder zonder server</button>
+    </div>
+  </div>
+</div>
+
+<!-- =========== TOPBAR =========== -->
+<div id="topbar" class="topbar" style="display:none;">
+  <div class="topbar-inner">
+    <div class="brand">
+      <div class="brand-mark">C</div>
+      <div>
+        <strong>CEDA</strong>
+        <small>Regiobijeenkomst — van data naar inzicht</small>
+      </div>
+    </div>
+    <div class="phase-pills">
+      <button class="pill" data-go="welcome"><span class="num">1</span>Welkom</button>
+      <button class="pill" data-go="explore"><span class="num">2</span>Verkennen</button>
+      <button class="pill" data-go="prioritize"><span class="num">3</span>Prioriteren</button>
+      <button class="pill" data-go="cases"><span class="num">4</span>Use cases</button>
+      <button class="pill" data-go="recap"><span class="num">5</span>Recap</button>
+    </div>
+    <div style="display:flex; align-items:center; gap:10px;">
+      <div class="participants-cluster" id="participants-cluster" style="display:none;" title="Verbonden deelnemers">
+        <span class="conn-dot" id="conn-dot"></span>
+        <div class="avatars-list" id="topbar-avatars"></div>
+        <span class="room-pill" id="topbar-room-code"></span>
+      </div>
+      <div class="timer" id="timer" title="Klik om te pauzeren">
+        <i class="fa-solid fa-stopwatch"></i>
+        <span id="timer-display">02:00:00</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- =========== STAGE: WELCOME =========== -->
+<section id="stage-welcome" class="stage active">
+
+  <!-- HERO -->
+  <div class="hero">
+    <!-- Decorative shapes -->
+    <div class="hero-bg-shape shape-rings-1">
+      <svg viewBox="0 0 520 520">
+        <circle cx="260" cy="260" r="60"/>
+        <circle cx="260" cy="260" r="120"/>
+        <circle cx="260" cy="260" r="180"/>
+        <circle cx="260" cy="260" r="240"/>
+      </svg>
+    </div>
+    <div class="hero-bg-shape shape-burst-1">
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <g fill="#F4D74B">
+          <circle cx="50" cy="50" r="14"/>
+          <path d="M50 0 L54 30 L46 30 Z"/>
+          <path d="M50 100 L54 70 L46 70 Z"/>
+          <path d="M0 50 L30 46 L30 54 Z"/>
+          <path d="M100 50 L70 46 L70 54 Z"/>
+          <path d="M14 14 L36 30 L30 36 Z"/>
+          <path d="M86 86 L64 70 L70 64 Z"/>
+          <path d="M86 14 L64 30 L70 36 Z"/>
+          <path d="M14 86 L36 70 L30 64 Z"/>
+        </g>
+      </svg>
+    </div>
+    <div class="hero-bg-shape shape-pulse-1">
+      <svg viewBox="0 0 800 200" preserveAspectRatio="none">
+        <path d="M0,100 Q100,20 200,100 T400,100 T600,100 T800,100" />
+      </svg>
+    </div>
+    <div class="hero-bg-shape shape-bow-1">
+      <svg viewBox="0 0 100 100">
+        <path d="M0 80 A 50 50 0 0 1 100 80" stroke="#DD784B" stroke-width="14" fill="none" stroke-linecap="round"/>
+      </svg>
+    </div>
+
+    <div class="container hero-content">
+      <span class="eyebrow"><i class="fa-solid fa-bolt"></i> Workshop · 2 uur · co-creatie</span>
+      <h1>Sneller van data naar <em>betrouwbare inzichten</em>.</h1>
+      <p class="hero-lead">
+        Welkom bij de CEDA-regiobijeenkomst voor het hbo en wo. Vandaag werken we samen aan kansen, prioriteiten en concrete use cases —
+        zodat onderwijsinstellingen kunnen inspelen op een steeds sneller veranderende wereld.
+      </p>
+      <div class="hero-cta">
+        <button class="btn btn-primary" id="cta-start"><i class="fa-solid fa-play"></i> Start de workshop</button>
+        <button class="btn btn-ghost" id="cta-scroll"><i class="fa-solid fa-arrow-down"></i> Eerst doorlezen</button>
+      </div>
+
+      <div class="hero-meta">
+        <div class="meta-card">
+          <div class="meta-icon"><i class="fa-solid fa-users"></i></div>
+          <span class="label">Voor wie</span>
+          <strong>Onderwijspraktijk, aansturing & ondersteuning</strong>
+        </div>
+        <div class="meta-card">
+          <div class="meta-icon"><i class="fa-solid fa-clock"></i></div>
+          <span class="label">Duur</span>
+          <strong>2 uur · 4 fasen</strong>
+        </div>
+        <div class="meta-card">
+          <div class="meta-icon"><i class="fa-solid fa-handshake"></i></div>
+          <span class="label">Werkwijze</span>
+          <strong>Co-creatie & dot-voting</strong>
+        </div>
+      </div>
+    </div>
+
+    <a href="#howitworks" class="scroll-indicator"><i class="fa-solid fa-chevron-down"></i></a>
+  </div>
+
+  <!-- HOW IT WORKS -->
+  <section class="howitworks" id="howitworks">
+    <div class="howit-deco howit-deco-1">
+      <svg viewBox="0 0 360 360">
+        <circle cx="180" cy="180" r="40"/>
+        <circle cx="180" cy="180" r="80"/>
+        <circle cx="180" cy="180" r="120"/>
+        <circle cx="180" cy="180" r="160"/>
+      </svg>
+    </div>
+    <div class="howit-deco howit-deco-2">
+      <svg viewBox="0 0 280 280" preserveAspectRatio="none">
+        <path d="M0,140 Q40,40 80,140 T160,140 T240,140 T320,140"/>
+      </svg>
+    </div>
+
+    <div class="container">
+      <div class="howit-intro">
+        <span class="section-eyebrow"><i class="fa-solid fa-route"></i> Hoe werkt het?</span>
+        <h2>In <em>twee uur</em> samen van losse signalen<br>naar gedeelde use cases.</h2>
+        <p class="lead-large">
+          We werken in vier korte fases. Iedereen draagt bij, iedereen stemt mee, en iedereen ziet elkaars input live verschijnen — zelfs als je op een andere laptop zit. Aan het einde heb je een concrete oogst om mee terug te nemen naar je instelling.
+        </p>
+      </div>
+
+      <div class="howit-steps">
+        <!-- Step 1 — Verkennen -->
+        <div class="howit-step" data-tone="green">
+          <div class="howit-text">
+            <span class="step-num"><span class="step-digit">01</span> · 30 min</span>
+            <h3>Verkennen.</h3>
+            <p class="step-desc">
+              Welke kansen zie jij vanuit jouw rol? Welke uitdagingen ervaar je in de praktijk? Schrijf concrete kaarten en lees met elkaar mee.
+            </p>
+            <ul class="step-features">
+              <li><i class="fa-solid fa-check"></i> Per rol gekleurde inspiratie uit échte praktijkpersona's</li>
+              <li><i class="fa-solid fa-check"></i> Klik een suggestie of typ je eigen verhaal</li>
+              <li><i class="fa-solid fa-check"></i> Iedereen ziet elkaars kaarten direct verschijnen</li>
+            </ul>
+          </div>
+          <div class="howit-visual">
+            <div class="viz-explore">
+              <div class="viz-col">
+                <span class="viz-tag viz-anim">Kansen</span>
+                <div class="viz-card viz-yellow viz-anim">Onderwerpen herkennen die niet aankomen</div>
+                <div class="viz-card viz-blue viz-anim">Effect meten van een lesaanpassing</div>
+                <div class="viz-card viz-pink viz-anim">Eerstejaars proactief begeleiden</div>
+              </div>
+              <div class="viz-col">
+                <span class="viz-tag viz-anim">Uitdagingen</span>
+                <div class="viz-card viz-orange viz-anim">Versnipperde data uit veel systemen</div>
+                <div class="viz-card viz-pink viz-anim">Privacy-kaders nog onduidelijk</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2 — Prioriteren -->
+        <div class="howit-step reverse" data-tone="blue">
+          <div class="howit-text">
+            <span class="step-num"><span class="step-digit">02</span> · 30 min</span>
+            <h3>Prioriteren.</h3>
+            <p class="step-desc">
+              Iedereen krijgt 5 stemmen. Verdeel ze over de inzichten die jij het meest urgent of waardevol vindt — stapelen op één kaart mag.
+            </p>
+            <ul class="step-features">
+              <li><i class="fa-solid fa-check"></i> Eigen budget per persoon, totaal in één oogopslag</li>
+              <li><i class="fa-solid fa-check"></i> Mini-avatars laten zien wie er heeft gestemd</li>
+              <li><i class="fa-solid fa-check"></i> De top stijgt automatisch naar boven</li>
+            </ul>
+          </div>
+          <div class="howit-visual">
+            <div class="viz-prioritize">
+              <div class="viz-vote-card viz-anim">
+                <div class="viz-vote-text">Eerstejaars proactief benaderen</div>
+                <div class="viz-vote-dots">
+                  <span class="viz-vd"></span><span class="viz-vd"></span><span class="viz-vd"></span><span class="viz-vd"></span>
+                </div>
+                <div class="viz-vote-bar" style="width: 80%;"></div>
+              </div>
+              <div class="viz-vote-card viz-anim">
+                <div class="viz-vote-text">Curriculum onderbouwen met data</div>
+                <div class="viz-vote-dots">
+                  <span class="viz-vd"></span><span class="viz-vd"></span><span class="viz-vd"></span>
+                </div>
+                <div class="viz-vote-bar" style="width: 60%;"></div>
+              </div>
+              <div class="viz-vote-card viz-anim">
+                <div class="viz-vote-text">Effect meten van lesaanpassing</div>
+                <div class="viz-vote-dots">
+                  <span class="viz-vd"></span><span class="viz-vd"></span>
+                </div>
+                <div class="viz-vote-bar" style="width: 40%;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 3 — Use cases -->
+        <div class="howit-step" data-tone="orange">
+          <div class="howit-text">
+            <span class="step-num"><span class="step-digit">03</span> · 45 min</span>
+            <h3>Use cases.</h3>
+            <p class="step-desc">
+              Vertaal de top-3 inzichten naar concrete use cases. Vier velden — Doel, Actoren, Resultaat en AI &amp; data — geven structuur. Focus op het <em>wat</em>, niet op het <em>hoe</em>.
+            </p>
+            <ul class="step-features">
+              <li><i class="fa-solid fa-check"></i> Voorbeeld helpt je het patroon herkennen</li>
+              <li><i class="fa-solid fa-check"></i> Live samen typen aan hetzelfde canvas</li>
+              <li><i class="fa-solid fa-check"></i> Kies extra inzichten als je tijd over hebt</li>
+            </ul>
+          </div>
+          <div class="howit-visual">
+            <div class="viz-cases-canvas viz-anim">
+              <div class="viz-cell tone-blue">
+                <div class="viz-cell-icon"><i class="fa-solid fa-bullseye"></i></div>
+                <span class="viz-cell-label">Doel</span>
+                <div class="viz-cell-line"></div>
+                <div class="viz-cell-line short"></div>
+              </div>
+              <div class="viz-cell tone-pink">
+                <div class="viz-cell-icon"><i class="fa-solid fa-users"></i></div>
+                <span class="viz-cell-label">Actoren</span>
+                <div class="viz-cell-line"></div>
+                <div class="viz-cell-line short"></div>
+              </div>
+              <div class="viz-cell tone-green">
+                <div class="viz-cell-icon"><i class="fa-solid fa-flag-checkered"></i></div>
+                <span class="viz-cell-label">Resultaat</span>
+                <div class="viz-cell-line"></div>
+                <div class="viz-cell-line short"></div>
+              </div>
+              <div class="viz-cell tone-orange">
+                <div class="viz-cell-icon"><i class="fa-solid fa-microchip"></i></div>
+                <span class="viz-cell-label">AI &amp; data</span>
+                <div class="viz-cell-line"></div>
+                <div class="viz-cell-line short"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 4 — Recap -->
+        <div class="howit-step reverse" data-tone="dark">
+          <div class="howit-text">
+            <span class="step-num"><span class="step-digit">04</span> · 15 min</span>
+            <h3>Recap &amp; oogst.</h3>
+            <p class="step-desc">
+              Je sluit af met een overzicht van alle inzichten en uitgewerkte use cases. Download als JSON, tekstbestand of print als PDF om mee te nemen naar je team.
+            </p>
+            <ul class="step-features">
+              <li><i class="fa-solid fa-check"></i> Statkaarten met inzichten, stemmen en use cases</li>
+              <li><i class="fa-solid fa-check"></i> Volledige oogst per deelnemer en per case</li>
+              <li><i class="fa-solid fa-check"></i> Direct deelbaar met je achterban</li>
+            </ul>
+          </div>
+          <div class="howit-visual">
+            <div class="viz-recap">
+              <div class="viz-recap-stats viz-anim">
+                <div class="viz-stat" style="background:var(--np-groen); color:var(--np-wit);">
+                  <div class="viz-stat-num">12</div>
+                  <div class="viz-stat-label">inzichten</div>
+                </div>
+                <div class="viz-stat" style="background:var(--np-geel); color:var(--np-zwart);">
+                  <div class="viz-stat-num">38</div>
+                  <div class="viz-stat-label">stemmen</div>
+                </div>
+                <div class="viz-stat" style="background:var(--np-roze); color:var(--np-zwart);">
+                  <div class="viz-stat-num">3</div>
+                  <div class="viz-stat-label">use cases</div>
+                </div>
+              </div>
+              <div class="viz-recap-list viz-anim">
+                <div class="viz-recap-row"><span class="check"><i class="fa-solid fa-check"></i></span> Use case 1 — Eerstejaars proactief benaderen</div>
+                <div class="viz-recap-row"><span class="check"><i class="fa-solid fa-check"></i></span> Use case 2 — Curriculum onderbouwen met data</div>
+                <div class="viz-recap-row"><span class="check"><i class="fa-solid fa-check"></i></span> Use case 3 — Effect meten van lesaanpassing</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PRIVACY CALLOUT -->
+      <div class="privacy-card">
+        <div class="privacy-card-deco">
+          <svg viewBox="0 0 200 200">
+            <circle cx="100" cy="100" r="30"/>
+            <circle cx="100" cy="100" r="55"/>
+            <circle cx="100" cy="100" r="80"/>
+          </svg>
+        </div>
+        <div class="privacy-icon-wrap"><i class="fa-solid fa-shield-halved"></i></div>
+        <div class="privacy-content">
+          <span class="privacy-eyebrow"><i class="fa-solid fa-lock"></i> Privacy</span>
+          <h3>Jullie antwoorden blijven volledig in je eigen browser.</h3>
+          <p class="privacy-lede">
+            Live-updates lopen via je eigen Node.js-server (WebSocket-relay), die alleen berichten doorgeeft aan deelnemers in dezelfde sessiecode — niets wordt bewaard, gelogd of opgeslagen. Pas wanneer je in de recap zelf kiest voor <em>Download als JSON</em>, <em>Download als tekst</em> of <em>Print als PDF</em> verlaat je oogst je apparaat.
+          </p>
+          <div class="privacy-promises">
+            <div class="privacy-promise">
+              <i class="fa-solid fa-check"></i>
+              <span><strong>Alleen lokale opslag.</strong> Inzichten, stemmen en use cases staan in jouw browser — nergens centraal.</span>
+            </div>
+            <div class="privacy-promise">
+              <i class="fa-solid fa-check"></i>
+              <span><strong>Geen logs of analytics.</strong> Geen antwoorden, geen contactgegevens, geen gebruiksstatistiek.</span>
+            </div>
+            <div class="privacy-promise">
+              <i class="fa-solid fa-check"></i>
+              <span><strong>Geen ballast.</strong> Geen authenticatie, geen klantdatabase, geen doorverkoop.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:center; margin-top: var(--space-8); position: relative; z-index: 1;">
+        <a href="#join-session" class="btn btn-primary"><i class="fa-solid fa-arrow-right"></i> Aanmelden bij sessie</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- SESSION JOIN SECTION -->
+  <div class="session-section" id="join-session">
+    <div class="session-deco">
+      <svg viewBox="0 0 280 280" preserveAspectRatio="none">
+        <path d="M0,140 Q40,40 80,140 T160,140 T240,140 T320,140"/>
+        <path d="M0,200 Q40,100 80,200 T160,200 T240,200 T320,200"/>
+      </svg>
+    </div>
+    <div class="container">
+      <span class="section-eyebrow"><i class="fa-solid fa-user-plus"></i> Stap 1 — Aanmelden bij sessie</span>
+      <h2>Doe samen mee aan de workshop</h2>
+      <p class="lead">Vul je naam in en sluit aan met een sessiecode, óf start een nieuwe. Iedereen met dezelfde code werkt live in dezelfde workshop — kaarten en stemmen verschijnen direct bij elkaar in beeld.</p>
+
+      <div class="session-card">
+        <div class="field">
+          <span class="field-label">Je naam</span>
+          <input type="text" id="user-name" placeholder="bv. Anouk" autocomplete="given-name" maxlength="40">
+        </div>
+
+        <div class="session-mode" role="tablist" aria-label="Sessiemodus">
+          <button class="mode-btn active" data-mode="join"><i class="fa-solid fa-right-to-bracket"></i> Sluit aan bij sessie</button>
+          <button class="mode-btn" data-mode="create"><i class="fa-solid fa-circle-plus"></i> Start een nieuwe sessie</button>
+        </div>
+
+        <div class="field" id="code-input-field">
+          <span class="field-label" id="code-input-label">Sessiecode (van de organisator)</span>
+          <div class="code-input-wrap">
+            <input type="text" id="room-code" placeholder="ABCD" maxlength="6" autocomplete="off" spellcheck="false">
+            <button class="btn btn-blue btn-sm" id="connect-btn"><i class="fa-solid fa-bolt"></i> <span id="connect-btn-label">Verbind</span></button>
+          </div>
+        </div>
+
+        <div class="field" id="code-display-field" style="display:none;">
+          <span class="field-label">Jouw sessiecode — deel deze met collega's</span>
+          <div class="code-display">
+            <span class="code-pill" id="code-pill">····</span>
+            <button class="btn btn-ghost btn-sm" id="copy-code"><i class="fa-solid fa-copy"></i> Kopieer</button>
+            <button class="btn btn-ghost btn-sm" id="leave-room"><i class="fa-solid fa-right-from-bracket"></i> Verlaat</button>
+          </div>
+        </div>
+
+        <div class="session-status" id="session-status">
+          <span class="status-dot"></span>
+          <span class="status-text">Nog niet verbonden — solo werken kan ook</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROLE SECTION -->
+  <div class="role-section" id="choose-role">
+    <div class="container">
+      <span class="section-eyebrow"><i class="fa-solid fa-id-badge"></i> Stap 2 — Kies je rol</span>
+      <h2>Welke bril zet jij vandaag op?</h2>
+      <p class="lead" style="font-size:18px; color:#444; margin-top:8px; max-width: 720px;">
+        Je inzichten en stem worden gekoppeld aan de rol die je kiest. Zo kunnen we straks zien hoe perspectieven tussen praktijk, aansturing en ondersteuning verschillen.
+      </p>
+
+      <div class="role-grid">
+        <button class="role-card" data-role="praktijk">
+          <span class="role-card-tag">Praktijk</span>
+          <div class="role-icon"><i class="fa-solid fa-chalkboard-user"></i></div>
+          <h3>Onderwijspraktijk</h3>
+          <p>Docent, SLB'er, onderwijskundige — dichtbij de student en het primaire proces.</p>
+          <ul class="role-bullets">
+            <li><i class="fa-solid fa-magnifying-glass-chart"></i> Onderwerpen herkennen die studenten missen en je lesopzet aanpassen</li>
+            <li><i class="fa-solid fa-hand-holding-heart"></i> Eerstejaars proactief begeleiden op basis van signalen</li>
+            <li><i class="fa-solid fa-chart-line"></i> Effect meten van een lesaanpassing of interventie</li>
+          </ul>
+          <span class="role-source">Geïnspireerd op persona's Sandjai (docent) &amp; Silvia (studentbegeleider) — doe-meer-met-studiedata.nl</span>
+        </button>
+        <button class="role-card" data-role="aansturing">
+          <span class="role-card-tag">Aansturing</span>
+          <div class="role-icon"><i class="fa-solid fa-compass"></i></div>
+          <h3>Aansturing</h3>
+          <p>Bestuurder, opleidingsdirecteur, beleidsmedewerker — verantwoordelijk voor koers, keuzes en beleid.</p>
+          <ul class="role-bullets">
+            <li><i class="fa-solid fa-chart-pie"></i> Sturen op actuele managementinformatie i.p.v. jaarrapportages</li>
+            <li><i class="fa-solid fa-diagram-project"></i> Probleemvakken en curriculumkeuzes onderbouwen met data</li>
+            <li><i class="fa-solid fa-clipboard-check"></i> Effecten van beleidsmaatregelen evalueren in plaats van aannemen</li>
+          </ul>
+          <span class="role-source">Geïnspireerd op persona's Sandra (bestuurder), Steven (opleidings­directeur) &amp; Safae (beleids­medewerker) — doe-meer-met-studiedata.nl</span>
+        </button>
+        <button class="role-card" data-role="ondersteuning">
+          <span class="role-card-tag">Ondersteuning</span>
+          <div class="role-icon"><i class="fa-solid fa-screwdriver-wrench"></i></div>
+          <h3>Ondersteunende dienst</h3>
+          <p>ICT-ondersteuner, onderwijsplanner, kwaliteitszorg, marketeer — randvoorwaarden en onderwijskwaliteit.</p>
+          <ul class="role-bullets">
+            <li><i class="fa-solid fa-pen-ruler"></i> Onderwijsontwerp en lesmateriaal verbeteren met studentdata</li>
+            <li><i class="fa-solid fa-magnifying-glass"></i> In- en uitzoomen: van losse les tot hele opleiding</li>
+            <li><i class="fa-solid fa-gauge-high"></i> Dashboards bouwen die docenten direct kunnen raadplegen</li>
+          </ul>
+          <span class="role-source">Geïnspireerd op persona Sofie (ondersteuner) — doe-meer-met-studiedata.nl</span>
+        </button>
+      </div>
+
+      <div class="agenda">
+        <h3>Hoe ziet de komende 2 uur eruit?</h3>
+        <div class="agenda-list">
+          <div class="agenda-item">
+            <div class="num">1</div>
+            <h4>Verkennen</h4>
+            <span>30 min · kansen & uitdagingen</span>
+          </div>
+          <div class="agenda-item">
+            <div class="num">2</div>
+            <h4>Prioriteren</h4>
+            <span>30 min · dot-voting</span>
+          </div>
+          <div class="agenda-item">
+            <div class="num">3</div>
+            <h4>Use cases</h4>
+            <span>45 min · canvas-werk</span>
+          </div>
+          <div class="agenda-item">
+            <div class="num">4</div>
+            <h4>Recap</h4>
+            <span>15 min · oogst & vervolg</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:center; margin-top: var(--space-7);">
+        <button class="btn btn-primary" id="role-continue" disabled><i class="fa-solid fa-arrow-right"></i> Naar fase 1: Verkennen</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =========== STAGE: EXPLORE =========== -->
+<section id="stage-explore" class="stage">
+  <div class="container">
+    <div class="stage-header">
+      <span class="stage-eyebrow"><i class="fa-solid fa-binoculars"></i> Fase 1 · Verkennen</span>
+      <h2>Wat gebeurt er in jouw praktijk?</h2>
+      <p class="lead">
+        Schrijf concrete kansen op die je ziet, en de uitdagingen waar je tegenaan loopt. Wees specifiek — een goed voorbeeld is goud waard. Voeg per kaart toe vanuit welke rol je kijkt.
+      </p>
+    </div>
+
+    <!-- INSPIRATIE PANEL -->
+    <div class="inspire-panel">
+      <div class="inspire-deco">
+        <svg viewBox="0 0 180 180">
+          <circle cx="90" cy="90" r="30"/>
+          <circle cx="90" cy="90" r="55"/>
+          <circle cx="90" cy="90" r="80"/>
+        </svg>
+      </div>
+      <div class="inspire-head">
+        <div class="inspire-title">
+          <div class="inspire-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+          <div>
+            <span class="label">Inspiratie</span>
+            <h3>Niet-zo-blanco vellen — gebaseerd op échte praktijkpersona's</h3>
+            <p>Klik een suggestie om hem direct als kaart aan de juiste kolom toe te voegen. Daarna kun je hem aanvullen met je eigen kaarten hierboven.</p>
+          </div>
+        </div>
+        <div class="inspire-tabs" id="inspire-tabs"></div>
+      </div>
+
+      <div class="persona-meta" id="persona-meta">
+        <i class="fa-solid fa-circle-user"></i>
+        <span id="persona-meta-text"><strong>Sandjai</strong> · docent in een hbo-economieopleiding die studiedata op een verantwoorde manier wil inzetten in zijn onderwijs.</span>
+      </div>
+
+      <div class="inspire-body">
+        <div class="inspire-side" data-type="kans">
+          <h4><i class="fa-solid fa-lightbulb"></i> Kansen die zij zien</h4>
+          <div class="chip-list" data-type="kans" id="inspire-kansen"></div>
+        </div>
+        <div class="inspire-side" data-type="uitdaging">
+          <h4><i class="fa-solid fa-triangle-exclamation"></i> Uitdagingen die zij ervaren</h4>
+          <div class="chip-list" data-type="uitdaging" id="inspire-uitdagingen"></div>
+        </div>
+      </div>
+
+      <div class="inspire-footer">
+        <i class="fa-solid fa-circle-info"></i>
+        Persona's overgenomen van Zone Studiedata —
+        <a href="https://doe-meer-met-studiedata.nl/persona/docent/" target="_blank" rel="noopener">docent</a>,
+        <a href="https://doe-meer-met-studiedata.nl/persona/studentbegeleider/" target="_blank" rel="noopener">studentbegeleider</a>,
+        <a href="https://doe-meer-met-studiedata.nl/persona/bestuurder/" target="_blank" rel="noopener">bestuurder</a>,
+        <a href="https://doe-meer-met-studiedata.nl/persona/opleidingsdirecteur/" target="_blank" rel="noopener">opleidingsdirecteur</a>,
+        <a href="https://doe-meer-met-studiedata.nl/persona/beleidsmedewerker/" target="_blank" rel="noopener">beleidsmedewerker</a> en
+        <a href="https://doe-meer-met-studiedata.nl/persona/ondersteuner/" target="_blank" rel="noopener">ondersteuner</a>.
+      </div>
+    </div>
+
+    <div class="explore-columns">
+      <!-- Kansen -->
+      <div class="explore-column" data-type="kans">
+        <div class="explore-column-head">
+          <div class="head-left">
+            <div class="head-icon"><i class="fa-solid fa-lightbulb"></i></div>
+            <h3>Kansen</h3>
+          </div>
+          <div class="count-badge" id="count-kans">0</div>
+        </div>
+        <div class="add-input">
+          <textarea data-input="kans" placeholder="Welke kans zie jij om sneller van data naar inzicht te komen?"></textarea>
+          <div class="add-input-row">
+            <div class="role-tag-group" data-role-group="kans">
+              <button class="role-tag" data-role="praktijk">Praktijk</button>
+              <button class="role-tag" data-role="aansturing">Aansturing</button>
+              <button class="role-tag" data-role="ondersteuning">Ondersteuning</button>
+            </div>
+            <button class="btn btn-blue btn-sm" data-add="kans"><i class="fa-solid fa-plus"></i> Toevoegen</button>
+          </div>
+        </div>
+        <div class="card-list" id="list-kans"></div>
+      </div>
+
+      <!-- Uitdagingen -->
+      <div class="explore-column" data-type="uitdaging">
+        <div class="explore-column-head">
+          <div class="head-left">
+            <div class="head-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+            <h3>Uitdagingen</h3>
+          </div>
+          <div class="count-badge" id="count-uitdaging">0</div>
+        </div>
+        <div class="add-input">
+          <textarea data-input="uitdaging" placeholder="Welke uitdaging ervaar je om data om te zetten in betrouwbaar inzicht?"></textarea>
+          <div class="add-input-row">
+            <div class="role-tag-group" data-role-group="uitdaging">
+              <button class="role-tag" data-role="praktijk">Praktijk</button>
+              <button class="role-tag" data-role="aansturing">Aansturing</button>
+              <button class="role-tag" data-role="ondersteuning">Ondersteuning</button>
+            </div>
+            <button class="btn btn-yellow btn-sm" data-add="uitdaging"><i class="fa-solid fa-plus"></i> Toevoegen</button>
+          </div>
+        </div>
+        <div class="card-list" id="list-uitdaging"></div>
+      </div>
+    </div>
+
+    <div class="stage-footer">
+      <div class="next-info">
+        <strong>Klaar om te prioriteren?</strong>
+        Verzamel zoveel mogelijk inzichten — straks kiezen we de meest waardevolle.
+      </div>
+      <button class="btn btn-primary" data-go-stage="prioritize"><i class="fa-solid fa-arrow-right"></i> Naar fase 2: Prioriteren</button>
+    </div>
+  </div>
+</section>
+
+<!-- =========== STAGE: PRIORITIZE =========== -->
+<section id="stage-prioritize" class="stage">
+  <div class="container">
+    <div class="stage-header">
+      <span class="stage-eyebrow"><i class="fa-solid fa-circle-dot"></i> Fase 2 · Prioriteren</span>
+      <h2>Waar liggen de grootste kansen?</h2>
+      <p class="lead">
+        Je hebt <strong>5 stemmen</strong> te vergeven. Verdeel ze over de inzichten die jij het meest waardevol of urgent vindt — je mag meerdere stemmen op één kaart plaatsen.
+      </p>
+    </div>
+
+    <div class="vote-meter">
+      <div class="meter-left">
+        <div>
+          <span class="label">Jouw stemmen</span>
+          <div style="font-size:32px; font-weight:700; line-height:1; margin-top:4px;">
+            <span id="votes-left">5</span> <span style="font-size:18px; color:#888; font-weight:500;">/ 5</span>
+          </div>
+        </div>
+        <div class="vote-budget" id="vote-budget"></div>
+      </div>
+      <button class="btn btn-ghost btn-sm" id="reset-votes"><i class="fa-solid fa-rotate-left"></i> Reset stemmen</button>
+    </div>
+
+    <div class="vote-grid" id="vote-grid"></div>
+
+    <div class="stage-footer">
+      <div class="next-info">
+        <strong>De top wint plek op het canvas.</strong>
+        De meest gestemde inzichten gaan automatisch door naar fase 3.
+      </div>
+      <button class="btn btn-primary" data-go-stage="cases"><i class="fa-solid fa-arrow-right"></i> Naar fase 3: Use cases</button>
+    </div>
+  </div>
+</section>
+
+<!-- =========== STAGE: CASES =========== -->
+<section id="stage-cases" class="stage">
+  <div class="container">
+    <div class="stage-header">
+      <span class="stage-eyebrow"><i class="fa-solid fa-rocket"></i> Fase 3 · Use cases</span>
+      <h2>Van inzicht naar concrete use case</h2>
+      <p class="lead">
+        Werk de hoogst gescoorde inzichten uit als use case. Vier vragen geven je structuur — focus op het <em>wat</em>, niet het <em>hoe</em>.
+      </p>
+    </div>
+
+    <!-- USE CASE INTRO -->
+    <div class="usecase-intro">
+      <div class="usecase-intro-deco">
+        <svg viewBox="0 0 200 200">
+          <circle cx="100" cy="100" r="30"/>
+          <circle cx="100" cy="100" r="55"/>
+          <circle cx="100" cy="100" r="80"/>
+        </svg>
+      </div>
+      <div class="usecase-intro-head">
+        <div class="intro-icon"><i class="fa-solid fa-circle-info"></i></div>
+        <h3>Wat verstaan we onder use cases?</h3>
+      </div>
+      <p class="lede">
+        Een use case beschrijft hoe een persoon een systeem gebruikt om een specifiek doel te bereiken — inclusief de stappen, alternatieve scenario's en de voorwaarden. Het focust op het <strong>"wat"</strong> (het doel) in plaats van het <strong>"hoe"</strong> (de technische implementatie).
+      </p>
+
+      <div class="usecase-anatomy">
+        <div class="anatomy-item tone-blue">
+          <div class="anatomy-icon"><i class="fa-solid fa-bullseye"></i></div>
+          <h4>Doel</h4>
+          <p>Wat wil je bereiken met deze use case?</p>
+        </div>
+        <div class="anatomy-item tone-pink">
+          <div class="anatomy-icon"><i class="fa-solid fa-users"></i></div>
+          <h4>Actoren</h4>
+          <p>Voor wie is deze use case belangrijk? Wie zijn betrokken?</p>
+        </div>
+        <div class="anatomy-item tone-green">
+          <div class="anatomy-icon"><i class="fa-solid fa-flag-checkered"></i></div>
+          <h4>Resultaat</h4>
+          <p>Wat is de bijdrage aan onderwijs, ondersteuning of begeleiding?</p>
+        </div>
+        <div class="anatomy-item tone-orange">
+          <div class="anatomy-icon"><i class="fa-solid fa-microchip"></i></div>
+          <h4>AI &amp; data</h4>
+          <p>Welke rol spelen AI en data hierin?</p>
+        </div>
+      </div>
+
+      <div class="usecase-example">
+        <span class="example-label"><i class="fa-solid fa-lightbulb"></i> Voorbeeld</span>
+        <p>De <span class="example-mark" data-kind="actor" data-label="actor">studieloopbaan­begeleider</span> ontvangt met behulp van de uitnodigings­regel een <span class="example-mark" data-kind="doel" data-label="doel">signaal welke studenten risico lopen op uitval</span>, zodat hij of zij deze studenten <span class="example-mark" data-kind="resultaat" data-label="resultaat">tijdig kan uitnodigen voor een gesprek en passende ondersteuning kan bieden</span>.</p>
+      </div>
+    </div>
+
+    <div class="case-pick">
+      <h3 style="display:flex; align-items:center; gap:10px;"><i class="fa-solid fa-arrows-up-to-line" style="color: var(--np-oranje);"></i> Kies welke inzichten je uitwerkt</h3>
+      <p style="margin: 8px 0 var(--space-4); color:#444; font-size:14px;">
+        De top 3 op basis van stemmen staan al aan. Je kunt extra inzichten aanzetten of er een uitzetten.
+      </p>
+      <div class="pick-grid" id="pick-grid"></div>
+    </div>
+
+    <div class="case-canvases" id="case-canvases"></div>
+
+    <div class="stage-footer">
+      <div class="next-info">
+        <strong>Bijna klaar!</strong>
+        In de recap krijg je alles overzichtelijk terug en kun je het delen.
+      </div>
+      <button class="btn btn-primary" data-go-stage="recap"><i class="fa-solid fa-arrow-right"></i> Naar de recap</button>
+    </div>
+  </div>
+</section>
+
+<!-- =========== STAGE: RECAP =========== -->
+<section id="stage-recap" class="stage">
+  <div class="container">
+    <div class="stage-header">
+      <span class="stage-eyebrow"><i class="fa-solid fa-flag-checkered"></i> Recap · oogst & vervolg</span>
+      <h2>Dit is jullie oogst van vandaag</h2>
+      <p class="lead">Een overzicht van inzichten, prioriteiten en uitgewerkte use cases. Download als bestand of print als PDF om mee te nemen.</p>
+    </div>
+
+    <div class="recap-grid">
+      <div class="stat-card" data-tone="green">
+        <div class="stat-num" id="stat-insights">0</div>
+        <div class="stat-label">inzichten verzameld</div>
+        <svg class="stat-shape" viewBox="0 0 100 100"><circle cx="50" cy="50" r="20" fill="none" stroke="#fff" stroke-width="6"/><circle cx="50" cy="50" r="40" fill="none" stroke="#fff" stroke-width="6"/></svg>
+      </div>
+      <div class="stat-card" data-tone="yellow">
+        <div class="stat-num" id="stat-votes">0</div>
+        <div class="stat-label">stemmen uitgebracht</div>
+        <svg class="stat-shape" viewBox="0 0 100 100"><circle cx="30" cy="50" r="10"/><circle cx="55" cy="50" r="10"/><circle cx="80" cy="50" r="10"/></svg>
+      </div>
+      <div class="stat-card" data-tone="pink">
+        <div class="stat-num" id="stat-cases">0</div>
+        <div class="stat-label">use cases uitgewerkt</div>
+        <svg class="stat-shape" viewBox="0 0 100 100"><path d="M0 70 Q25 30 50 70 T100 70" fill="none" stroke="#fff" stroke-width="6"/></svg>
+      </div>
+    </div>
+
+    <div id="recap-cases" class="recap-cases"></div>
+
+    <div class="actions-bar">
+      <button class="btn btn-yellow" id="export-json"><i class="fa-solid fa-download"></i> Download als JSON</button>
+      <button class="btn btn-green" id="export-text"><i class="fa-solid fa-file-lines"></i> Download als tekst</button>
+      <button class="btn btn-ghost" id="print-recap"><i class="fa-solid fa-print"></i> Print / PDF</button>
+      <button class="btn btn-ghost" id="reset-all" style="margin-left:auto;"><i class="fa-solid fa-trash-can"></i> Workshop resetten</button>
+    </div>
+  </div>
+</section>
+
+<div id="toast" class="toast"><i class="fa-solid fa-circle-check"></i> <span id="toast-msg"></span></div>
+
+<script type="module">
+/* =========================================================
+   REALTIME (WebSocket via eigen Node.js-server)
+   - Verbindt naar /ws?room=<CODE> op dezelfde host als de pagina.
+   - Geen externe brokers, geen account, geen CDN nodig.
+   - Auto-reconnect bij verbroken verbinding.
+   ========================================================= */
+let wsClient = null;
+let wsReconnectTimer = null;
+let heartbeatInterval = null;
+const WS_PATH = '/ws';
+
+function wsUrl(code) {
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const host = location.host || 'localhost:3000';
+  return `${proto}//${host}${WS_PATH}?room=${encodeURIComponent(code)}`;
+}
+
+/* =========================================================
+   PERSONA DATA — bron: doe-meer-met-studiedata.nl
+   ========================================================= */
+const PERSONAS = {
+  // ------- PRAKTIJK -------
+  docent: {
+    label: 'Docent',
+    icon: 'fa-chalkboard-user',
+    name: 'Sandjai',
+    role: 'docent in een hbo-economieopleiding',
+    intro: 'die studiedata op een verantwoorde manier wil inzetten in zijn onderwijs.',
+    kansen: [
+      'Onderwerpen herkennen die in mijn vak slecht begrepen worden — en mijn lesopzet daarop aanpassen',
+      'Specifieke groepen studenten gericht aanspreken op hun voortgang',
+      'Een baselinemeting doen om te zien of een lesaanpassing écht impact heeft',
+      'Studenten die dreigen af te haken vroegtijdig herkennen via signalen in studiedata',
+      'Toetsresultaten gebruiken om mijn vak structureel beter te maken',
+      'Zien welke werkvormen het meest effect hebben op begripsniveau'
+    ],
+    uitdagingen: [
+      'Onduidelijke ethische kaders: wat mag ik wel en niet met studiedata?',
+      'Geen ondersteuning bij het verzamelen en analyseren van data',
+      'Onduidelijke afspraken over toegang en verantwoordelijkheid',
+      'Geen gebruiksvriendelijk dashboard waar ik mijn data terugvind',
+      'Cultuur waarin docenten studiedata nog niet vanzelfsprekend mogen inzetten',
+      'Privacyzorgen: wanneer is een groep groot genoeg om iets over te zeggen?'
+    ]
+  },
+  slb: {
+    label: 'Studentbegeleider',
+    icon: 'fa-comments',
+    name: 'Silvia',
+    role: 'studentbegeleider aan een technische universiteit',
+    intro: 'die in haar dagelijkse gesprekken meer gebruik wil maken van studiedata — op een verantwoorde manier.',
+    kansen: [
+      'Proactief eerstejaars benaderen op basis van signalen uit studiedata',
+      'De Studie Thermometer-vragenlijst gebruiken om gericht extra begeleiding aan te bieden',
+      'Data combineren met begeleidings­gesprekken voor een rijker beeld van de student',
+      'Sneller zien welke studenten extra ondersteuning kunnen gebruiken',
+      'Beter onderbouwen waarom ik een student benader — niet puur op gevoel',
+      'Vroegtijdig studievertraging signaleren in plaats van pas achteraf reageren'
+    ],
+    uitdagingen: [
+      'Studenten alleen op basis van cijfers benaderen voelt te afstandelijk',
+      'Onzekerheid over privacy bij gevoelige onderwerpen (welbevinden, prestaties)',
+      'Hoe combineer ik data met de menselijke maat in een gesprek?',
+      'Onvoldoende inzicht in welke data ik mág gebruiken voor begeleiding',
+      'Versnipperde tools — geen integraal overzicht per student',
+      'Onduidelijke route: wat doe ik met een signaal dat ik uit data oppik?'
+    ]
+  },
+  // ------- AANSTURING -------
+  bestuurder: {
+    label: 'Bestuurder',
+    icon: 'fa-compass',
+    name: 'Sandra',
+    role: 'voorzitter College van Bestuur van een grote hbo-instelling',
+    intro: 'die wil dat haar instelling meer doet met studiedata.',
+    kansen: [
+      'Sturen op actuele managementinformatie in plaats van op vertraagde jaarrapportages',
+      'Een goed onderbouwd verhaal kunnen vertellen aan OCW, inspectie en de raad van toezicht',
+      'Studiesucces over de hele instelling vergelijken zodat opleidingen van elkaar kunnen leren',
+      'Indicatoren ontwikkelen voor onderwijskwaliteit, niet alleen voor rendement',
+      'Datageletterdheid binnen de organisatie versnellen',
+      'Strategische keuzes (bekostiging, profilering) onderbouwen met data'
+    ],
+    uitdagingen: [
+      'Cultuurverandering: van intuïtie en gevoel naar onderbouwde keuzes',
+      'Privacy- en ethiekkaders die samen met OR en medezeggenschap vastgelegd moeten worden',
+      'Versnipperde data uit verschillende systemen (SIS, LMS, vragenlijsten)',
+      'Capaciteit en talent: data-analyse vraagt expertise die schaars is',
+      'Risico op perverse prikkels als sturing puur op cijfers gaat',
+      'Vertrouwen winnen bij docenten die bang zijn voor controle in plaats van leren'
+    ]
+  },
+  opleidingsdirecteur: {
+    label: 'Opleidingsdirecteur',
+    icon: 'fa-diagram-project',
+    name: 'Steven',
+    role: 'opleidingsdirecteur van een exacte opleiding aan een brede universiteit',
+    intro: 'die wil dat zijn opleiding op een verantwoorde manier meer doet met studiedata.',
+    kansen: [
+      'Probleemvakken in het curriculum identificeren en gericht herontwerpen',
+      'Begeleidbaarheid van het curriculum monitoren — waar haken studenten af?',
+      'Studenttevredenheid combineren met studievoortgang voor een rijker beeld',
+      'Effectiviteit en efficiëntie van de opleiding zichtbaar maken',
+      'Achtergrondkenmerken meenemen om kansenongelijkheid te signaleren',
+      'Curriculumherzieningen onderbouwd doorvoeren in plaats van op gevoel'
+    ],
+    uitdagingen: [
+      'Geaggregeerde versus niet-geaggregeerde data — wanneer mag wat?',
+      'Tijd vinden om data-inzichten te vertalen naar curriculumkeuzes',
+      'Docenten meekrijgen in het gebruik van data voor hun vak',
+      'Kleine cohorten waardoor statistiek minder betrouwbaar wordt',
+      'Snel reageren op signalen versus jaarlijkse evaluatiecycli',
+      'Verwachtingen van het werkveld koppelen aan studiedata uit de opleiding'
+    ]
+  },
+  beleidsmedewerker: {
+    label: 'Beleidsmedewerker',
+    icon: 'fa-clipboard-list',
+    name: 'Safae',
+    role: 'beleidsmedewerker bij een middelgrote hbo-instelling',
+    intro: 'die weet dat verantwoord gebruik van studiedata haar beleidswerk beter en effectiever maakt.',
+    kansen: [
+      'Beleidsvoorstellen aan opleidingsdirecteuren en bestuurders beter onderbouwen',
+      'Effecten van nieuwe beleidsmaatregelen evalueren in plaats van aannemen dat ze werken',
+      'Docenten en studenten betrekken bij het beoordelen van beleidsimpact',
+      'Efficiënter werken door terugkerende analyses te standaardiseren',
+      'Snel beleidsvragen beantwoorden zonder eindeloze data-trekverzoeken',
+      'Onderbouwd advies geven over waar interventies het meeste effect hebben'
+    ],
+    uitdagingen: [
+      'Kloof tussen wat je wíl weten en wat de data feitelijk laten zien',
+      'Beleidsvragen vertalen naar onderzoekbare data-vragen — methodologisch lastig',
+      'Toegang tot data binnen de organisatie is niet altijd duidelijk geregeld',
+      'Drukke agenda van bestuurders — een dashboard moet meteen overtuigen',
+      'Verwachtingen managen: data lossen geen beleidsdilemma\'s op, ze informeren ze',
+      'Beleidscycli zijn lang, terwijl data juist actuele inzichten geven'
+    ]
+  },
+  // ------- ONDERSTEUNING -------
+  ondersteuner: {
+    label: 'Ondersteuner',
+    icon: 'fa-screwdriver-wrench',
+    name: 'Sofie',
+    role: 'ICT-ondersteuner aan een hbo-faculteit die docenten helpt bij onderwijsontwerp met ICT',
+    intro: 'die mogelijkheden ziet om studiedata beter in te zetten voor het ontwerp en de kwaliteit van onderwijs.',
+    kansen: [
+      'Het ontwerp van onderwijs en lesmateriaal verbeteren op basis van studentdata',
+      'Docenten adviseren over werkvormen die aantoonbaar effectiever zijn',
+      'Onderwijs efficiënter organiseren en ondersteunen samen met collega-ondersteuners',
+      'Inzoomen op specifieke lessen — of uitzoomen naar de hele opleiding én vergelijkbare periodes uit voorgaande jaren',
+      'Studentbetrokkenheid, materiaalkwaliteit en tevredenheid zichtbaar maken in één overzicht',
+      'Geautomatiseerde dashboards en rapportages bouwen die docenten direct kunnen raadplegen'
+    ],
+    uitdagingen: [
+      'Heldere ethische principes die recht doen aan studenten én docenten',
+      'Werken binnen de kaders van privacywetgeving — wat mag wel, wat niet?',
+      'Cultuur waarin ondersteuners en docenten studiedata willen én kunnen inzetten',
+      'Goede ondersteuning bij verzamelen, analyseren en interpreteren van data',
+      'Duidelijke afspraken over wie toegang heeft en wiens verantwoordelijkheid wat is',
+      'Gebruiksvriendelijke toegang tot inzichten — geen losse Excel-bestanden meer'
+    ]
+  }
+};
+const PERSONA_GROUPS = {
+  praktijk: ['docent', 'slb'],
+  aansturing: ['bestuurder', 'opleidingsdirecteur', 'beleidsmedewerker'],
+  ondersteuning: ['ondersteuner']
+};
+let activePersona = 'docent';
+
+/* =========================================================
+   STATE
+   ========================================================= */
+const STORAGE_KEY = 'ceda-workshop-v2';
+const USER_KEY = 'ceda-workshop-user';
+const TOTAL_TIME_S = 2 * 60 * 60;
+const DEFAULT_VOTES = 5;
+const TOP_PICK = 3;
+const APP_ID = 'ceda-regiobijeenkomst-2026';
+
+function getOrCreateUser() {
+  try {
+    const raw = localStorage.getItem(USER_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch(e){}
+  const user = {
+    userId: 'u_' + Math.random().toString(36).slice(2, 11),
+    userName: ''
+  };
+  try { localStorage.setItem(USER_KEY, JSON.stringify(user)); } catch(e){}
+  return user;
+}
+function saveUser() {
+  try { localStorage.setItem(USER_KEY, JSON.stringify({ userId: state.userId, userName: state.userName })); } catch(e){}
+}
+
+const _user = getOrCreateUser();
+
+const initialState = () => ({
+  userId: _user.userId,
+  userName: _user.userName || '',
+  roomCode: null,
+  role: null,
+  insights: [],     // { id, type, text, role, authorId, authorName, ts, votes: { userId: count } }
+  cases: {},        // { insightId: { doel, actoren, resultaat, ai_data, _ts_*: ms } }
+  selectedCases: [],
+  participants: {}, // { userId: { name, role, lastSeen } }
+  timer: { remaining: TOTAL_TIME_S, running: false, lastTick: null }
+});
+
+let state = loadState() || initialState();
+// Migrate to current schema
+if (!state.userId) state.userId = _user.userId;
+if (typeof state.userName !== 'string') state.userName = _user.userName || '';
+if (!state.participants) state.participants = {};
+state.insights.forEach(i => {
+  if (typeof i.votes === 'number') {
+    const old = i.votes;
+    i.votes = old > 0 ? { [state.userId]: old } : {};
+  }
+  if (!i.votes || typeof i.votes !== 'object') i.votes = {};
+  if (!i.authorId) i.authorId = state.userId;
+  if (!i.authorName) i.authorName = state.userName || 'Anoniem';
+  if (!i.ts) i.ts = Date.now();
+});
+
+let pendingRole = { kans: null, uitdaging: null };
+let timerInterval = null;
+let currentStage = 'welcome';
+
+/* Sync runtime */
+let suppressBroadcast = false;
+let connectionState = 'disconnected'; // disconnected | connecting | connected | failed
+let sessionMode = 'join'; // join | create
+
+function saveState() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e){}
+}
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch(e){ return null; }
+}
+
+/* =========================================================
+   NAVIGATION
+   ========================================================= */
+function goTo(stage) {
+  currentStage = stage;
+  document.querySelectorAll('.stage').forEach(s => s.classList.remove('active'));
+  document.getElementById('stage-' + stage).classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  const tb = document.getElementById('topbar');
+  if (stage === 'welcome') {
+    tb.style.display = 'none';
+  } else {
+    tb.style.display = 'block';
+    updatePills();
+    if (!state.timer.running && state.timer.remaining > 0) startTimer();
+  }
+  if (stage === 'explore') renderExplore();
+  if (stage === 'prioritize') renderPrioritize();
+  if (stage === 'cases') renderCases();
+  if (stage === 'recap') renderRecap();
+}
+
+function updatePills() {
+  const order = ['welcome','explore','prioritize','cases','recap'];
+  const idx = order.indexOf(currentStage);
+  document.querySelectorAll('.pill').forEach((p, i) => {
+    p.classList.remove('current','done');
+    if (i < idx) p.classList.add('done');
+    if (i === idx) p.classList.add('current');
+  });
+}
+
+document.querySelectorAll('.pill').forEach(p => {
+  p.addEventListener('click', () => {
+    const target = p.getAttribute('data-go');
+    goTo(target);
+  });
+});
+document.querySelectorAll('[data-go-stage]').forEach(b => {
+  b.addEventListener('click', () => goTo(b.getAttribute('data-go-stage')));
+});
+
+/* =========================================================
+   TIMER
+   ========================================================= */
+function fmtTime(s) {
+  const h = Math.floor(s / 3600).toString().padStart(2,'0');
+  const m = Math.floor((s % 3600) / 60).toString().padStart(2,'0');
+  const sec = Math.floor(s % 60).toString().padStart(2,'0');
+  return `${h}:${m}:${sec}`;
+}
+function renderTimer() {
+  document.getElementById('timer-display').textContent = fmtTime(state.timer.remaining);
+}
+function startTimer() {
+  if (timerInterval) clearInterval(timerInterval);
+  state.timer.running = true;
+  state.timer.lastTick = Date.now();
+  timerInterval = setInterval(() => {
+    state.timer.remaining = Math.max(0, state.timer.remaining - 1);
+    renderTimer();
+    saveState();
+    if (state.timer.remaining === 0) { stopTimer(); toast('Tijd is om — neem nog 5 minuten om af te ronden.'); }
+  }, 1000);
+}
+function stopTimer() {
+  if (timerInterval) clearInterval(timerInterval);
+  state.timer.running = false;
+  saveState();
+}
+document.getElementById('timer').addEventListener('click', () => {
+  if (state.timer.running) { stopTimer(); toast('Timer gepauzeerd'); }
+  else { startTimer(); toast('Timer hervat'); }
+});
+
+/* =========================================================
+   WELCOME — session join + role selection
+   ========================================================= */
+function setSessionMode(mode) {
+  sessionMode = mode;
+  document.querySelectorAll('.mode-btn').forEach(b => {
+    b.classList.toggle('active', b.getAttribute('data-mode') === mode);
+  });
+  const codeInput = document.getElementById('room-code');
+  const label = document.getElementById('code-input-label');
+  const btnLabel = document.getElementById('connect-btn-label');
+  if (mode === 'create') {
+    codeInput.value = generateRoomCode();
+    label.textContent = 'Jouw nieuwe sessiecode (deel met anderen)';
+    btnLabel.textContent = 'Maak sessie';
+  } else {
+    codeInput.value = '';
+    label.textContent = 'Sessiecode (van de organisator)';
+    btnLabel.textContent = 'Verbind';
+  }
+}
+
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => setSessionMode(btn.getAttribute('data-mode')));
+});
+
+const userNameInput = document.getElementById('user-name');
+userNameInput.addEventListener('input', () => {
+  state.userName = userNameInput.value.trim();
+  saveUser();
+  saveState();
+  if (state.participants[state.userId]) {
+    state.participants[state.userId].name = state.userName;
+    state.participants[state.userId].lastSeen = Date.now();
+  }
+  if (isWsOpen()) announceMyself();
+  renderTopbarParticipants();
+});
+
+document.getElementById('connect-btn').addEventListener('click', async () => {
+  // Nudge to HTTPS first time someone starts a session over file://
+  const isSecure = location.protocol === 'https:'
+    || location.hostname === 'localhost'
+    || location.hostname === '127.0.0.1';
+  const nudged = sessionStorage.getItem('ceda-https-nudged') === '1';
+  if (!isSecure && !nudged) {
+    sessionStorage.setItem('ceda-https-nudged', '1');
+    document.getElementById('https-modal').style.display = '';
+    return;
+  }
+  const code = document.getElementById('room-code').value.trim().toUpperCase();
+  await joinSessionRoom(code);
+});
+document.getElementById('room-code').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('connect-btn').click();
+});
+document.getElementById('copy-code').addEventListener('click', async () => {
+  const code = state.roomCode || '';
+  try { await navigator.clipboard.writeText(code); toast('Sessiecode gekopieerd: ' + code); }
+  catch(e) { toast('Kon niet kopiëren — typ over: ' + code); }
+});
+document.getElementById('leave-room').addEventListener('click', () => {
+  leaveSessionRoom();
+  toast('Sessie verlaten');
+});
+
+document.getElementById('cta-start').addEventListener('click', () => {
+  document.getElementById('join-session').scrollIntoView({ behavior: 'smooth' });
+  setTimeout(() => document.getElementById('user-name').focus(), 600);
+});
+document.getElementById('cta-scroll').addEventListener('click', () => {
+  document.getElementById('howitworks').scrollIntoView({ behavior: 'smooth' });
+});
+
+document.querySelectorAll('.role-card').forEach(card => {
+  card.addEventListener('click', () => {
+    document.querySelectorAll('.role-card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+    state.role = card.getAttribute('data-role');
+    document.getElementById('role-continue').disabled = false;
+    saveState();
+  });
+});
+
+document.getElementById('role-continue').addEventListener('click', () => {
+  if (!state.role) return;
+  if (!state.userName) { toast('Vul eerst je naam in bij stap 1'); document.getElementById('user-name').focus(); return; }
+  pendingRole.kans = state.role;
+  pendingRole.uitdaging = state.role;
+  highlightDefaultRoleTags();
+  state.participants[state.userId] = { name: state.userName, role: state.role, lastSeen: Date.now() };
+  saveState();
+  if (isWsOpen()) announceMyself();
+  goTo('explore');
+});
+
+function highlightDefaultRoleTags() {
+  document.querySelectorAll('[data-role-group]').forEach(group => {
+    const type = group.getAttribute('data-role-group');
+    group.querySelectorAll('.role-tag').forEach(tag => {
+      tag.classList.toggle('active', tag.getAttribute('data-role') === pendingRole[type]);
+    });
+  });
+}
+
+/* =========================================================
+   EXPLORE
+   ========================================================= */
+const COLOR_CYCLE = ['color-yellow','color-pink','color-blue','color-orange','color-green'];
+
+function getPersonaKeysForRole(role) {
+  const list = PERSONA_GROUPS[role] || [];
+  if (list.length > 0) return list;
+  // Fallback: show all personas if role has no group yet
+  return Object.keys(PERSONAS);
+}
+
+function renderInspireTabs() {
+  const tabsEl = document.getElementById('inspire-tabs');
+  if (!tabsEl) return;
+  const keys = getPersonaKeysForRole(state.role);
+  if (!keys.includes(activePersona)) activePersona = keys[0];
+  tabsEl.innerHTML = '';
+  keys.forEach(key => {
+    const persona = PERSONAS[key];
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'inspire-tab' + (activePersona === key ? ' active' : '');
+    btn.setAttribute('data-persona', key);
+    btn.innerHTML = `<i class="fa-solid ${persona.icon}"></i> ${escapeHtml(persona.label)} · ${escapeHtml(persona.name)}`;
+    tabsEl.appendChild(btn);
+  });
+}
+
+function renderInspire() {
+  renderInspireTabs();
+  const persona = PERSONAS[activePersona];
+  if (!persona) return;
+  const metaText = document.getElementById('persona-meta-text');
+  if (metaText) {
+    metaText.innerHTML = `<strong>${escapeHtml(persona.name)}</strong> · ${escapeHtml(persona.role)} ${escapeHtml(persona.intro)}`;
+  }
+
+  const kansenEl = document.getElementById('inspire-kansen');
+  const uitdEl   = document.getElementById('inspire-uitdagingen');
+  if (!kansenEl || !uitdEl) return;
+  kansenEl.innerHTML = '';
+  uitdEl.innerHTML = '';
+  persona.kansen.slice(0, 3).forEach(text => kansenEl.appendChild(buildChip('kans', text)));
+  persona.uitdagingen.slice(0, 3).forEach(text => uitdEl.appendChild(buildChip('uitdaging', text)));
+}
+
+function buildChip(type, text) {
+  const chip = document.createElement('button');
+  chip.type = 'button';
+  chip.className = 'chip';
+  chip.innerHTML = `<span class="chip-text">${escapeHtml(text)}</span><i class="fa-solid fa-plus"></i>`;
+  chip.addEventListener('click', (e) => {
+    e.preventDefault();
+    addInsight(type, text);
+    // Quick visual feedback before re-render
+    chip.style.background = 'var(--np-groen)';
+    chip.style.color = 'var(--np-wit)';
+    chip.style.borderColor = 'var(--np-groen)';
+  });
+  return chip;
+}
+
+function renderExplore() {
+  renderInspire();
+  ['kans','uitdaging'].forEach(type => {
+    const list = document.getElementById('list-' + type);
+    const items = state.insights.filter(i => i.type === type);
+    list.innerHTML = '';
+    if (items.length === 0) {
+      list.innerHTML = '<div class="empty-state"><i class="fa-solid fa-comment-dots"></i><div style="margin-top:8px;">Nog geen kaarten — voeg je eerste hierboven toe.</div></div>';
+    } else {
+      items.forEach((item, idx) => {
+        list.appendChild(buildInsightCard(item, idx));
+      });
+    }
+    document.getElementById('count-' + type).textContent = items.length;
+  });
+  highlightDefaultRoleTags();
+}
+
+function buildInsightCard(item, idx) {
+  const card = document.createElement('div');
+  card.className = 'insight-card ' + COLOR_CYCLE[idx % COLOR_CYCLE.length];
+  const roleLabel = { praktijk: 'Praktijk', aansturing: 'Aansturing', ondersteuning: 'Ondersteuning' }[item.role] || 'Rol';
+  const isMine = item.authorId === state.userId;
+  const authorName = isMine ? 'jij' : (item.authorName || 'Anoniem');
+  card.innerHTML = `
+    <div class="card-text">${escapeHtml(item.text)}</div>
+    <div class="card-meta">
+      <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+        <span class="card-role-tag" data-role="${item.role}">${roleLabel}</span>
+        <span class="card-author">${avatarHtml(item.authorId || 'unknown', item.authorName, true)} ${escapeHtml(authorName)}</span>
+      </div>
+      <div class="card-actions">
+        ${isMine ? `<button title="Verwijderen" data-remove="${item.id}"><i class="fa-solid fa-xmark"></i></button>` : ''}
+      </div>
+    </div>
+  `;
+  const removeBtn = card.querySelector('[data-remove]');
+  if (removeBtn) {
+    removeBtn.addEventListener('click', () => {
+      state.insights = state.insights.filter(i => i.id !== item.id);
+      delete state.cases[item.id];
+      state.selectedCases = state.selectedCases.filter(id => id !== item.id);
+      saveState(); renderExplore();
+      broadcast({ op: 'insight:remove', id: item.id });
+    });
+  }
+  return card;
+}
+
+document.getElementById('inspire-tabs').addEventListener('click', (e) => {
+  const tab = e.target.closest('.inspire-tab');
+  if (!tab) return;
+  activePersona = tab.getAttribute('data-persona');
+  renderInspire();
+});
+
+document.querySelectorAll('[data-add]').forEach(btn => {
+  btn.addEventListener('click', () => addInsight(btn.getAttribute('data-add')));
+});
+document.querySelectorAll('[data-input]').forEach(t => {
+  t.addEventListener('keydown', (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+      addInsight(t.getAttribute('data-input'));
+    }
+  });
+});
+document.querySelectorAll('[data-role-group] .role-tag').forEach(tag => {
+  tag.addEventListener('click', () => {
+    const group = tag.closest('[data-role-group]');
+    const type = group.getAttribute('data-role-group');
+    pendingRole[type] = tag.getAttribute('data-role');
+    group.querySelectorAll('.role-tag').forEach(t => t.classList.remove('active'));
+    tag.classList.add('active');
+  });
+});
+
+function addInsight(type, providedText) {
+  let text = (providedText || '').trim();
+  let ta = null;
+  if (!text) {
+    ta = document.querySelector(`textarea[data-input="${type}"]`);
+    text = ta ? ta.value.trim() : '';
+  }
+  if (!text) { toast('Schrijf eerst iets — je kunt zo concreet zijn als je wilt.'); if (ta) ta.focus(); return; }
+  const role = pendingRole[type] || state.role || 'praktijk';
+  const item = {
+    id: 'i_' + Math.random().toString(36).slice(2,9),
+    type, text, role,
+    authorId: state.userId,
+    authorName: state.userName || 'Anoniem',
+    ts: Date.now(),
+    votes: {}
+  };
+  state.insights.push(item);
+  if (ta) ta.value = '';
+  saveState();
+  renderExplore();
+  broadcast({ op: 'insight:add', payload: item });
+  toast(type === 'kans' ? 'Kans toegevoegd' : 'Uitdaging toegevoegd');
+}
+
+/* =========================================================
+   PRIORITIZE
+   ========================================================= */
+function votesTotalOn(item) {
+  if (!item.votes || typeof item.votes !== 'object') return 0;
+  return Object.values(item.votes).reduce((s, n) => s + (n || 0), 0);
+}
+function myVotesOn(item) {
+  if (!item.votes || typeof item.votes !== 'object') return 0;
+  return item.votes[state.userId] || 0;
+}
+function votesUsedByMe() {
+  return state.insights.reduce((s, i) => s + myVotesOn(i), 0);
+}
+
+function renderPrioritize() {
+  const used = votesUsedByMe();
+  const remaining = Math.max(0, DEFAULT_VOTES - used);
+  const left = document.getElementById('votes-left');
+  if (left) left.textContent = remaining;
+
+  const budget = document.getElementById('vote-budget');
+  budget.innerHTML = '';
+  for (let i = 0; i < DEFAULT_VOTES; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'vote-dot' + (i >= remaining ? ' spent' : '');
+    budget.appendChild(dot);
+  }
+
+  let grid = document.getElementById('vote-grid');
+  // If grid was replaced earlier with vote-empty, restore proper grid
+  if (!grid.classList.contains('vote-grid')) {
+    const newGrid = document.createElement('div');
+    newGrid.id = 'vote-grid';
+    newGrid.className = 'vote-grid';
+    grid.parentNode.replaceChild(newGrid, grid);
+    grid = newGrid;
+  }
+  grid.innerHTML = '';
+  if (state.insights.length === 0) {
+    grid.classList.remove('vote-grid');
+    grid.outerHTML = `<div class="vote-empty" id="vote-grid"><i class="fa-solid fa-circle-info"></i><h3 style="margin-top:8px;">Nog geen inzichten om op te stemmen</h3><p style="margin-top:4px; color:#555;">Ga eerst terug naar fase 1 en voeg minstens een paar kaarten toe.</p></div>`;
+    return;
+  }
+
+  state.insights.forEach(item => {
+    const card = document.createElement('div');
+    card.className = 'vote-card';
+    const total = votesTotalOn(item);
+    const mine = myVotesOn(item);
+    const fillWidth = Math.min(100, total * 8);
+    const typeLabel = item.type === 'kans' ? 'Kans' : 'Uitdaging';
+    const isMine = item.authorId === state.userId;
+    const authorLabel = isMine ? 'jij' : (item.authorName || 'Anoniem');
+
+    // Voter avatars
+    const voterIds = Object.keys(item.votes || {}).filter(uid => (item.votes[uid] || 0) > 0);
+    const voterHtml = voterIds.slice(0, 4).map(uid => {
+      const p = state.participants[uid] || { name: uid === state.userId ? state.userName : '?' };
+      return avatarHtml(uid, p.name || '?', true);
+    }).join('');
+
+    card.innerHTML = `
+      <div class="vote-card-head">
+        <span class="type-tag" data-type="${item.type}">${typeLabel}</span>
+        <span class="card-author">${avatarHtml(item.authorId || 'unknown', item.authorName, true)} ${escapeHtml(authorLabel)}</span>
+      </div>
+      <div class="vote-card-text">${escapeHtml(item.text)}</div>
+      <div class="vote-controls">
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <div class="vote-count">${total}<i class="fa-solid fa-thumbtack"></i></div>
+          <div style="font-size:11px; color:#666; font-weight:600;">jouw: ${mine} · ${voterIds.length} ${voterIds.length === 1 ? 'stemmer' : 'stemmers'}</div>
+          ${voterHtml ? `<div style="display:flex; gap:2px; margin-top:2px;">${voterHtml}</div>` : ''}
+        </div>
+        <div style="display:flex; gap:6px;">
+          <button class="vote-btn" data-vote-down="${item.id}" ${mine===0?'disabled':''}><i class="fa-solid fa-minus"></i></button>
+          <button class="vote-btn add" data-vote-up="${item.id}" ${remaining===0?'disabled':''}><i class="fa-solid fa-plus"></i></button>
+        </div>
+      </div>
+      <div class="vote-fill" style="width:${fillWidth}%; background:${item.type==='kans'?'var(--np-blauw)':'var(--np-oranje)'};"></div>
+    `;
+    grid.appendChild(card);
+  });
+
+  grid.querySelectorAll('[data-vote-up]').forEach(b => {
+    b.addEventListener('click', () => {
+      const id = b.getAttribute('data-vote-up');
+      const item = state.insights.find(i => i.id === id);
+      if (!item) return;
+      if (votesUsedByMe() >= DEFAULT_VOTES) return;
+      if (!item.votes || typeof item.votes !== 'object') item.votes = {};
+      item.votes[state.userId] = (item.votes[state.userId] || 0) + 1;
+      saveState(); renderPrioritize();
+      broadcast({ op: 'vote:set', insightId: id, count: item.votes[state.userId] });
+    });
+  });
+  grid.querySelectorAll('[data-vote-down]').forEach(b => {
+    b.addEventListener('click', () => {
+      const id = b.getAttribute('data-vote-down');
+      const item = state.insights.find(i => i.id === id);
+      if (!item) return;
+      if (!item.votes || typeof item.votes !== 'object') item.votes = {};
+      const cur = item.votes[state.userId] || 0;
+      if (cur > 0) {
+        const next = cur - 1;
+        if (next <= 0) delete item.votes[state.userId];
+        else item.votes[state.userId] = next;
+        saveState(); renderPrioritize();
+        broadcast({ op: 'vote:set', insightId: id, count: next });
+      }
+    });
+  });
+}
+
+document.getElementById('reset-votes').addEventListener('click', () => {
+  state.insights.forEach(i => {
+    if (i.votes && typeof i.votes === 'object' && i.votes[state.userId]) {
+      delete i.votes[state.userId];
+      broadcast({ op: 'vote:set', insightId: i.id, count: 0 });
+    }
+  });
+  saveState(); renderPrioritize();
+  toast('Jouw stemmen zijn gereset');
+});
+
+/* =========================================================
+   CASES
+   ========================================================= */
+const CASE_FIELDS = [
+  { key: 'doel',      label: 'Doel',       icon: 'fa-bullseye',       tone: 'blue',   prompt: 'Wat wil je bereiken met deze use case? Beschrijf het concrete doel in één zin.' },
+  { key: 'actoren',   label: 'Actoren',    icon: 'fa-users',          tone: 'pink',   prompt: 'Voor wie is deze use case belangrijk? Wie zijn er betrokken (rollen, niet personen)?' },
+  { key: 'resultaat', label: 'Resultaat',  icon: 'fa-flag-checkered', tone: 'green',  prompt: 'Wat is de bijdrage aan het onderwijs, de onderwijsondersteuning of de studentbegeleiding?' },
+  { key: 'ai_data',   label: 'AI & data',  icon: 'fa-microchip',      tone: 'orange', prompt: 'Welke rol spelen AI en data hierin? Welke data is nodig, en hoe wordt die ingezet?' }
+];
+const CASE_FIELD_TONE_CLASS = { blue: 'field-blue', pink: 'field-pink', green: 'field-green', orange: 'field-orange' };
+function emptyCase() {
+  const c = {};
+  CASE_FIELDS.forEach(f => { c[f.key] = ''; });
+  return c;
+}
+
+function migrateCases() {
+  const fieldMap = { probleem: 'doel', doelgroep: 'actoren', data: 'ai_data', oplossing: 'resultaat' };
+  Object.values(state.cases || {}).forEach(c => {
+    Object.entries(fieldMap).forEach(([oldKey, newKey]) => {
+      if (c[oldKey] && !c[newKey]) {
+        c[newKey] = c[oldKey];
+        if (c['_ts_' + oldKey]) c['_ts_' + newKey] = c['_ts_' + oldKey];
+      }
+    });
+  });
+}
+migrateCases();
+
+function renderCases() {
+  // Auto-pick top 3 if no selection yet
+  if (state.selectedCases.length === 0 && state.insights.length > 0) {
+    const sorted = [...state.insights].sort((a,b) => votesTotalOn(b) - votesTotalOn(a));
+    state.selectedCases = sorted.slice(0, Math.min(TOP_PICK, sorted.length)).map(i => i.id);
+    saveState();
+    broadcast({ op: 'selection:set', selectedCases: state.selectedCases.slice() });
+  }
+
+  const pickGrid = document.getElementById('pick-grid');
+  pickGrid.innerHTML = '';
+  if (state.insights.length === 0) {
+    pickGrid.innerHTML = '<div class="empty-state" style="grid-column: 1/-1;">Geen inzichten beschikbaar — ga terug naar fase 1.</div>';
+  } else {
+    [...state.insights].sort((a,b) => votesTotalOn(b) - votesTotalOn(a)).forEach(item => {
+      const isSelected = state.selectedCases.includes(item.id);
+      const card = document.createElement('button');
+      card.className = 'pick-card' + (isSelected ? ' selected' : '');
+      const typeLabel = item.type === 'kans' ? 'Kans' : 'Uitdaging';
+      const total = votesTotalOn(item);
+      card.innerHTML = `
+        <div class="pick-text">${escapeHtml(item.text)}</div>
+        <div class="pick-meta">
+          <span class="type-tag" data-type="${item.type}">${typeLabel}</span>
+          <span class="pick-votes"><i class="fa-solid fa-thumbtack"></i> ${total}</span>
+        </div>
+      `;
+      card.addEventListener('click', () => {
+        if (state.selectedCases.includes(item.id)) {
+          state.selectedCases = state.selectedCases.filter(x => x !== item.id);
+        } else {
+          state.selectedCases.push(item.id);
+        }
+        saveState(); renderCases();
+        broadcast({ op: 'selection:set', selectedCases: state.selectedCases.slice() });
+      });
+      pickGrid.appendChild(card);
+    });
+  }
+
+  const canvases = document.getElementById('case-canvases');
+  canvases.innerHTML = '';
+  if (state.selectedCases.length === 0) {
+    canvases.innerHTML = '<div class="empty-state" style="background:var(--np-wit);">Selecteer hierboven minstens één inzicht om uit te werken.</div>';
+    return;
+  }
+
+  state.selectedCases.forEach((id, idx) => {
+    const item = state.insights.find(i => i.id === id);
+    if (!item) return;
+    if (!state.cases[id]) state.cases[id] = emptyCase();
+    const c = state.cases[id];
+    const canvas = document.createElement('div');
+    canvas.className = 'case-canvas';
+    const fieldsHtml = CASE_FIELDS.map(f => `
+      <div class="canvas-field ${CASE_FIELD_TONE_CLASS[f.tone]}">
+        <div class="canvas-field-head">
+          <div class="canvas-field-icon"><i class="fa-solid ${f.icon}"></i></div>
+          <h4>${escapeHtml(f.label)}</h4>
+          <div class="typing-indicator" data-id="${id}" data-field="${f.key}"></div>
+        </div>
+        <textarea data-case="${id}" data-field="${f.key}" placeholder="${escapeHtml(f.prompt)}">${escapeHtml(c[f.key] || '')}</textarea>
+      </div>
+    `).join('');
+    canvas.innerHTML = `
+      <div class="canvas-head">
+        <div class="canvas-num">${idx + 1}</div>
+        <div class="canvas-title">
+          <span class="label">Use case · ${item.type === 'kans' ? 'kans' : 'uitdaging'}</span>
+          <h3>${escapeHtml(item.text)}</h3>
+        </div>
+      </div>
+      <div class="canvas-grid">${fieldsHtml}</div>
+    `;
+    canvases.appendChild(canvas);
+  });
+
+  const typingBroadcastTimer = {};
+  document.querySelectorAll('[data-case]').forEach(ta => {
+    // Initialize previous value so diff baseline is correct
+    taPrevValues.set(ta, ta.value);
+
+    ta.addEventListener('focus', () => {
+      const id = ta.getAttribute('data-case');
+      const field = ta.getAttribute('data-field');
+      broadcast({ op: 'typing:focus', insightId: id, field });
+    });
+
+    ta.addEventListener('input', () => {
+      const id = ta.getAttribute('data-case');
+      const field = ta.getAttribute('data-field');
+      const oldVal = taPrevValues.get(ta) || '';
+      const newVal = ta.value;
+      const diff = textDiff(oldVal, newVal);
+      const ts = Date.now();
+      if (!state.cases[id]) state.cases[id] = emptyCase();
+      state.cases[id][field] = newVal;
+      state.cases[id]['_ts_' + field] = ts;
+      taPrevValues.set(ta, newVal);
+      saveState();
+      if (diff) {
+        broadcast({ op: 'text:patch', insightId: id, field, pos: diff.pos, del: diff.del, ins: diff.ins, ts });
+      }
+      // Periodic typing heartbeat (lets others know I'm still active even between bursts)
+      const key = id + ':' + field;
+      if (typingBroadcastTimer[key]) clearTimeout(typingBroadcastTimer[key]);
+      typingBroadcastTimer[key] = setTimeout(() => {
+        broadcast({ op: 'typing:focus', insightId: id, field });
+      }, 1500);
+    });
+  });
+  // Refresh indicators after re-render so existing typers stay visible
+  refreshTypingIndicators();
+}
+
+/* =========================================================
+   RECAP
+   ========================================================= */
+function renderRecap() {
+  document.getElementById('stat-insights').textContent = state.insights.length;
+  const totalVotes = state.insights.reduce((s, i) => s + votesTotalOn(i), 0);
+  document.getElementById('stat-votes').textContent = totalVotes;
+  const filledCases = state.selectedCases.filter(id => {
+    const c = state.cases[id];
+    return c && CASE_FIELDS.some(f => c[f.key]);
+  });
+  document.getElementById('stat-cases').textContent = filledCases.length;
+
+  const wrap = document.getElementById('recap-cases');
+  wrap.innerHTML = '';
+  if (state.selectedCases.length === 0) {
+    wrap.innerHTML = '<div class="empty-state" style="background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.7); border-color:rgba(255,255,255,0.2);">Geen use cases uitgewerkt.</div>';
+    return;
+  }
+  state.selectedCases.forEach((id, idx) => {
+    const item = state.insights.find(i => i.id === id);
+    if (!item) return;
+    const c = state.cases[id] || {};
+    const total = votesTotalOn(item);
+    const fieldsHtml = CASE_FIELDS.map(f =>
+      `<div class="recap-field"><span class="label">${escapeHtml(f.label)}</span><p>${escapeHtml(c[f.key] || '—')}</p></div>`
+    ).join('');
+    const block = document.createElement('div');
+    block.className = 'recap-case';
+    block.innerHTML = `
+      <h3>Use case ${idx+1} — ${escapeHtml(item.text)}</h3>
+      <div class="item-meta">${item.type === 'kans' ? 'Kans' : 'Uitdaging'} · ${item.role} · ${total} stemmen · door ${escapeHtml(item.authorName || 'Anoniem')}</div>
+      <div class="recap-fields">${fieldsHtml}</div>
+    `;
+    wrap.appendChild(block);
+  });
+}
+
+document.getElementById('export-json').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  download(blob, `ceda-workshop-${ymd()}.json`);
+});
+document.getElementById('export-text').addEventListener('click', () => {
+  let t = `CEDA Regiobijeenkomst — Workshop oogst\nDatum: ${new Date().toLocaleString('nl-NL')}\nSessie: ${state.roomCode || 'solo'}\nDeelnemer: ${state.userName || '-'} (${state.role || '-'})\n\n`;
+  t += `=== DEELNEMERS ===\n`;
+  Object.entries(state.participants || {}).forEach(([uid, p]) => {
+    t += `  • ${p.name || 'Anoniem'}${p.role ? ' — ' + p.role : ''}${uid === state.userId ? ' (jij)' : ''}\n`;
+  });
+  t += `\n=== INZICHTEN ===\n`;
+  ['kans','uitdaging'].forEach(type => {
+    t += `\n${type === 'kans' ? 'KANSEN' : 'UITDAGINGEN'}:\n`;
+    state.insights.filter(i => i.type === type).forEach(i => {
+      t += `  • [${i.role}] ${i.text} (${votesTotalOn(i)} stemmen, door ${i.authorName || 'Anoniem'})\n`;
+    });
+  });
+  t += `\n=== USE CASES ===\n`;
+  state.selectedCases.forEach((id, idx) => {
+    const item = state.insights.find(i => i.id === id);
+    if (!item) return;
+    const c = state.cases[id] || {};
+    t += `\n${idx+1}. ${item.text}\n`;
+    CASE_FIELDS.forEach(f => {
+      t += `   ${f.label}: ${c[f.key] || '—'}\n`;
+    });
+  });
+  download(new Blob([t], { type:'text/plain' }), `ceda-workshop-${ymd()}.txt`);
+});
+document.getElementById('print-recap').addEventListener('click', () => window.print());
+document.getElementById('reset-all').addEventListener('click', () => {
+  if (!confirm('Weet je zeker dat je álles wilt resetten? Alle inzichten, stemmen en use cases verdwijnen — voor jou. Andere deelnemers in dezelfde sessie behouden hun lokale kopie.')) return;
+  stopTimer();
+  if (wsReconnectTimer) { clearTimeout(wsReconnectTimer); wsReconnectTimer = null; }
+  if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
+  if (wsClient) { try { wsClient.close(1000, 'reset'); } catch(e){} wsClient = null; }
+  state = initialState();
+  state.userId = _user.userId;
+  state.userName = _user.userName || '';
+  saveState();
+  document.querySelectorAll('.role-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('role-continue').disabled = true;
+  setSessionStatus('disconnected', 'Niet verbonden — solo werken kan ook');
+  document.getElementById('code-input-field').style.display = '';
+  document.getElementById('code-display-field').style.display = 'none';
+  document.getElementById('participants-cluster').style.display = 'none';
+  goTo('welcome');
+  toast('Workshop gereset');
+});
+
+/* =========================================================
+   UTILS
+   ========================================================= */
+function escapeHtml(s) {
+  return (s || '').replace(/[&<>"']/g, ch => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[ch]));
+}
+function download(blob, name) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 200);
+}
+function ymd() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  document.getElementById('toast-msg').textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2400);
+}
+
+/* =========================================================
+   AVATAR HELPERS
+   ========================================================= */
+const AVATAR_PALETTE = [
+  { bg: 'var(--np-blauw)',  fg: 'var(--np-wit)' },
+  { bg: 'var(--np-oranje)', fg: 'var(--np-wit)' },
+  { bg: 'var(--np-groen)',  fg: 'var(--np-wit)' },
+  { bg: 'var(--np-geel)',   fg: 'var(--np-zwart)' },
+  { bg: 'var(--np-roze)',   fg: 'var(--np-zwart)' }
+];
+function colorForUser(userId) {
+  let hash = 0;
+  for (let i = 0; i < userId.length; i++) hash = ((hash << 5) - hash) + userId.charCodeAt(i);
+  return AVATAR_PALETTE[Math.abs(hash) % AVATAR_PALETTE.length];
+}
+function initialsFor(name) {
+  if (!name) return '?';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+function avatarHtml(userId, name, mini) {
+  const c = colorForUser(userId);
+  const cls = mini ? 'avatar-mini' : 'avatar';
+  return `<span class="${cls}" style="background:${c.bg}; color:${c.fg};" title="${escapeHtml(name || '')}">${escapeHtml(initialsFor(name))}</span>`;
+}
+
+/* =========================================================
+   REALTIME SYNC
+   ========================================================= */
+function broadcast(op) {
+  if (suppressBroadcast) return;
+  publishOp(op);
+}
+
+function publishOp(op) {
+  if (!wsClient || wsClient.readyState !== WebSocket.OPEN) return;
+  if (!state.roomCode) return;
+  const msg = { ...op, by: state.userId, ts: op.ts || Date.now() };
+  try {
+    wsClient.send(JSON.stringify(msg));
+  } catch (e) { console.warn('send failed', e); }
+}
+
+function isWsOpen() {
+  return wsClient && wsClient.readyState === WebSocket.OPEN;
+}
+
+/* Live-edit helpers: diff/patch + typing indicators */
+const taPrevValues = new WeakMap();
+const typingState = new Map(); // key "insightId:field" → Map<userId,{name,until}>
+let typingRefreshTimer = null;
+
+function textDiff(oldStr, newStr) {
+  if (oldStr === newStr) return null;
+  const oldLen = oldStr.length, newLen = newStr.length;
+  let prefix = 0;
+  const minLen = Math.min(oldLen, newLen);
+  while (prefix < minLen && oldStr.charCodeAt(prefix) === newStr.charCodeAt(prefix)) prefix++;
+  let suffix = 0;
+  while (suffix < (oldLen - prefix) && suffix < (newLen - prefix) &&
+         oldStr.charCodeAt(oldLen - 1 - suffix) === newStr.charCodeAt(newLen - 1 - suffix)) {
+    suffix++;
+  }
+  return { pos: prefix, del: oldLen - prefix - suffix, ins: newStr.slice(prefix, newLen - suffix) };
+}
+
+function applyTextPatch(opMsg) {
+  if (!state.cases[opMsg.insightId]) state.cases[opMsg.insightId] = emptyCase();
+  const c = state.cases[opMsg.insightId];
+  const field = opMsg.field;
+  const cur = c[field] || '';
+  const del = opMsg.del || 0;
+  const ins = opMsg.ins || '';
+  const pos = Math.max(0, Math.min(cur.length, opMsg.pos || 0));
+  const newVal = cur.slice(0, pos) + ins + cur.slice(pos + del);
+  c[field] = newVal;
+  c['_ts_' + field] = opMsg.ts || Date.now();
+
+  // Surgical DOM update — preserve cursor for the focused user
+  const ta = document.querySelector(`textarea[data-case="${opMsg.insightId}"][data-field="${field}"]`);
+  if (ta) {
+    const isFocused = (document.activeElement === ta);
+    const cursorStart = ta.selectionStart;
+    const cursorEnd = ta.selectionEnd;
+    ta.value = newVal;
+    taPrevValues.set(ta, newVal);
+    if (isFocused) {
+      const shift = ins.length - del;
+      let ns = cursorStart, ne = cursorEnd;
+      if (pos <= cursorStart) {
+        ns = Math.max(0, cursorStart + shift);
+        ne = Math.max(0, cursorEnd + shift);
+      } else if (pos < cursorEnd) {
+        ne = ns;
+      }
+      try { ta.setSelectionRange(ns, ne); } catch(e) {}
+    }
+  }
+
+  noteTyper(opMsg.insightId, field, opMsg.by);
+}
+
+function noteTyper(insightId, field, userId) {
+  if (!userId || userId === state.userId) return;
+  const key = insightId + ':' + field;
+  if (!typingState.has(key)) typingState.set(key, new Map());
+  const name = (state.participants[userId] && state.participants[userId].name) || 'iemand';
+  typingState.get(key).set(userId, { name, until: Date.now() + 2500 });
+  scheduleTypingRefresh();
+}
+
+function scheduleTypingRefresh() {
+  refreshTypingIndicators();
+  if (typingRefreshTimer) return;
+  typingRefreshTimer = setInterval(() => {
+    const now = Date.now();
+    let anyActive = false;
+    typingState.forEach((map, key) => {
+      [...map].forEach(([uid, info]) => {
+        if (info.until > now) anyActive = true;
+        else map.delete(uid);
+      });
+      if (map.size === 0) typingState.delete(key);
+    });
+    refreshTypingIndicators();
+    if (!anyActive) { clearInterval(typingRefreshTimer); typingRefreshTimer = null; }
+  }, 600);
+}
+
+function refreshTypingIndicators() {
+  document.querySelectorAll('.typing-indicator').forEach(el => {
+    const id = el.getAttribute('data-id');
+    const field = el.getAttribute('data-field');
+    const key = id + ':' + field;
+    const map = typingState.get(key);
+    el.innerHTML = '';
+    if (!map || map.size === 0) { el.classList.remove('active'); return; }
+    const now = Date.now();
+    const active = [...map].filter(([uid, info]) => info.until > now && uid !== state.userId);
+    if (active.length === 0) { el.classList.remove('active'); return; }
+    el.classList.add('active');
+    active.slice(0, 3).forEach(([uid, info]) => {
+      const span = document.createElement('span');
+      span.className = 'typing-chip';
+      span.innerHTML = `${avatarHtml(uid, info.name, true)}<span>${escapeHtml(info.name)}</span><span class="typing-dot"></span>`;
+      el.appendChild(span);
+    });
+    if (active.length > 3) {
+      const more = document.createElement('span');
+      more.className = 'typing-chip';
+      more.textContent = '+' + (active.length - 3);
+      el.appendChild(more);
+    }
+  });
+}
+
+function applyRemoteOp(opMsg, peerId) {
+  if (!opMsg || opMsg.by === state.userId) return;
+
+  // Live-edit ops: surgical, no rerender
+  if (opMsg.op === 'text:patch') {
+    suppressBroadcast = true;
+    try { applyTextPatch(opMsg); saveState(); } finally { suppressBroadcast = false; }
+    return;
+  }
+  if (opMsg.op === 'typing:focus') {
+    noteTyper(opMsg.insightId, opMsg.field, opMsg.by);
+    return;
+  }
+
+  suppressBroadcast = true;
+  try {
+    switch (opMsg.op) {
+      case 'state:request':
+        // Reply with full state after a small random delay to spread responses
+        setTimeout(() => {
+          if (isWsOpen()) {
+            publishOp({ op: 'state:full', payload: serializeState() });
+          }
+        }, Math.random() * 800 + 200);
+        return;
+      case 'state:full': mergeRemoteState(opMsg.payload); break;
+      case 'insight:add':
+        if (opMsg.payload && !state.insights.find(i => i.id === opMsg.payload.id)) {
+          state.insights.push(normalizeInsight(opMsg.payload));
+        }
+        break;
+      case 'insight:remove':
+        state.insights = state.insights.filter(i => i.id !== opMsg.id);
+        delete state.cases[opMsg.id];
+        state.selectedCases = state.selectedCases.filter(x => x !== opMsg.id);
+        break;
+      case 'vote:set': {
+        const ins = state.insights.find(i => i.id === opMsg.insightId);
+        if (ins) {
+          if (!ins.votes || typeof ins.votes !== 'object') ins.votes = {};
+          if ((opMsg.count || 0) <= 0) delete ins.votes[opMsg.by];
+          else ins.votes[opMsg.by] = opMsg.count;
+        }
+        break;
+      }
+      case 'case:update': {
+        if (!state.cases[opMsg.insightId]) state.cases[opMsg.insightId] = emptyCase();
+        const c = state.cases[opMsg.insightId];
+        const tsKey = '_ts_' + opMsg.field;
+        if (!c[tsKey] || c[tsKey] < opMsg.ts) {
+          c[opMsg.field] = opMsg.value;
+          c[tsKey] = opMsg.ts;
+        }
+        break;
+      }
+      case 'selection:set':
+        if (Array.isArray(opMsg.selectedCases)) state.selectedCases = opMsg.selectedCases.slice();
+        break;
+      case 'participant:announce': {
+        if (!state.participants) state.participants = {};
+        const isNew = !state.participants[opMsg.by];
+        state.participants[opMsg.by] = {
+          name: opMsg.name || 'Anoniem',
+          role: opMsg.role || null,
+          lastSeen: opMsg.ts || Date.now()
+        };
+        // If this is a brand-new peer and we have data, share our state with them
+        if (isNew && (state.insights.length > 0 || state.selectedCases.length > 0)) {
+          setTimeout(() => {
+            if (isWsOpen()) {
+              publishOp({ op: 'state:full', payload: serializeState() });
+            }
+          }, Math.random() * 600 + 100);
+        }
+        refreshConnectionLabel();
+        break;
+      }
+    }
+    saveState();
+    rerender();
+  } finally {
+    suppressBroadcast = false;
+  }
+}
+
+function normalizeInsight(item) {
+  if (!item.votes || typeof item.votes !== 'object') item.votes = {};
+  if (!item.authorId) item.authorId = 'unknown';
+  if (!item.authorName) item.authorName = 'Anoniem';
+  if (!item.ts) item.ts = Date.now();
+  return item;
+}
+
+function serializeState() {
+  return {
+    insights: state.insights,
+    cases: state.cases,
+    selectedCases: state.selectedCases,
+    participants: state.participants
+  };
+}
+
+function mergeRemoteState(remote) {
+  if (!remote) return;
+  if (Array.isArray(remote.insights)) {
+    const byId = new Map(state.insights.map(i => [i.id, i]));
+    remote.insights.forEach(item => {
+      const existing = byId.get(item.id);
+      if (!existing) {
+        state.insights.push(normalizeInsight(item));
+      } else {
+        // Merge votes
+        existing.votes = existing.votes || {};
+        const incoming = item.votes || {};
+        Object.keys(incoming).forEach(uid => {
+          if (!(uid in existing.votes)) existing.votes[uid] = incoming[uid];
+        });
+      }
+    });
+  }
+  if (remote.cases) {
+    const fieldKeys = CASE_FIELDS.map(f => f.key);
+    Object.entries(remote.cases).forEach(([id, c]) => {
+      if (!state.cases[id]) state.cases[id] = emptyCase();
+      fieldKeys.forEach(field => {
+        const tsKey = '_ts_' + field;
+        const remoteTs = c[tsKey] || 0;
+        const localTs = state.cases[id][tsKey] || 0;
+        if (remoteTs > localTs) {
+          state.cases[id][field] = c[field] || '';
+          state.cases[id][tsKey] = remoteTs;
+        } else if (!state.cases[id][field] && c[field]) {
+          state.cases[id][field] = c[field];
+          if (remoteTs) state.cases[id][tsKey] = remoteTs;
+        }
+      });
+    });
+  }
+  if (Array.isArray(remote.selectedCases) && state.selectedCases.length === 0) {
+    state.selectedCases = remote.selectedCases.slice();
+  }
+  if (remote.participants) {
+    Object.entries(remote.participants).forEach(([uid, p]) => {
+      if (!state.participants[uid] || (state.participants[uid].lastSeen || 0) < (p.lastSeen || 0)) {
+        state.participants[uid] = p;
+      }
+    });
+  }
+}
+
+function rerender() {
+  // Preserve textarea focus + cursor across rerender
+  let focusInfo = null;
+  const ae = document.activeElement;
+  if (ae && ae.tagName === 'TEXTAREA' && ae.dataset && ae.dataset.case) {
+    focusInfo = {
+      id: ae.dataset.case,
+      field: ae.dataset.field,
+      start: ae.selectionStart,
+      end: ae.selectionEnd
+    };
+  }
+  if (currentStage === 'explore') renderExplore();
+  if (currentStage === 'prioritize') renderPrioritize();
+  if (currentStage === 'cases') renderCases();
+  if (currentStage === 'recap') renderRecap();
+  renderTopbarParticipants();
+  if (focusInfo) {
+    const ta = document.querySelector(`textarea[data-case="${focusInfo.id}"][data-field="${focusInfo.field}"]`);
+    if (ta) {
+      ta.focus();
+      try { ta.setSelectionRange(focusInfo.start, focusInfo.end); } catch(e) {}
+    }
+  }
+}
+
+function renderTopbarParticipants() {
+  const cluster = document.getElementById('participants-cluster');
+  if (!cluster) return;
+  if (!state.roomCode) { cluster.style.display = 'none'; return; }
+  cluster.style.display = 'flex';
+  const dot = document.getElementById('conn-dot');
+  dot.classList.toggle('disconnected', connectionState !== 'connected');
+  document.getElementById('topbar-room-code').textContent = state.roomCode;
+
+  const list = document.getElementById('topbar-avatars');
+  list.innerHTML = '';
+  const participants = Object.entries(state.participants || {});
+  // Always include self
+  if (!state.participants[state.userId]) {
+    state.participants[state.userId] = { name: state.userName, role: state.role, lastSeen: Date.now() };
+  }
+  const sorted = Object.entries(state.participants)
+    .sort((a, b) => (a[0] === state.userId ? -1 : (b[0] === state.userId ? 1 : 0)));
+  const max = 5;
+  sorted.slice(0, max).forEach(([uid, p]) => {
+    const div = document.createElement('div');
+    div.innerHTML = avatarHtml(uid, p.name + (uid === state.userId ? ' (jij)' : ''), false);
+    list.appendChild(div.firstChild);
+  });
+  if (sorted.length > max) {
+    const more = document.createElement('span');
+    more.className = 'avatar more';
+    more.textContent = '+' + (sorted.length - max);
+    list.appendChild(more);
+  }
+}
+
+function setSessionStatus(status, text) {
+  connectionState = status;
+  const el = document.getElementById('session-status');
+  if (!el) return;
+  el.classList.remove('connected','connecting','failed');
+  if (status === 'connected') el.classList.add('connected');
+  else if (status === 'connecting') el.classList.add('connecting');
+  else if (status === 'failed') el.classList.add('failed');
+  el.querySelector('.status-text').textContent = text;
+  renderTopbarParticipants();
+}
+
+async function joinSessionRoom(code) {
+  code = (code || '').trim().toUpperCase();
+  if (!code || code.length < 3) { toast('Voer een geldige sessiecode in (min. 3 tekens)'); return false; }
+  if (!/^[A-Z0-9]+$/.test(code)) { toast('Sessiecode mag alleen letters en cijfers bevatten'); return false; }
+  if (!state.userName) { toast('Vul eerst je naam in'); document.getElementById('user-name').focus(); return false; }
+
+  setSessionStatus('connecting', 'Bezig met verbinden...');
+
+  // Cleanup previous
+  if (wsReconnectTimer) { clearTimeout(wsReconnectTimer); wsReconnectTimer = null; }
+  if (wsClient) { try { wsClient.close(1000, 'reconnect'); } catch(e){} wsClient = null; }
+  if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
+
+  state.roomCode = code;
+  saveState();
+
+  return new Promise((resolve) => {
+    let resolved = false;
+    let connectTimer = null;
+    let socket;
+    try {
+      socket = new WebSocket(wsUrl(code));
+    } catch (err) {
+      console.error('ws constructor threw', err);
+      setSessionStatus('failed', 'Kon niet verbinden — werk solo door');
+      resolve(false); return;
+    }
+    wsClient = socket;
+
+    connectTimer = setTimeout(() => {
+      if (resolved) return;
+      try { socket.close(); } catch(e){}
+      setSessionStatus('failed', 'Verbinden duurde te lang — werk solo door');
+      resolved = true; resolve(false);
+    }, 9000);
+
+    socket.addEventListener('open', () => {
+      if (connectTimer) { clearTimeout(connectTimer); connectTimer = null; }
+      publishOp({ op: 'state:request' });
+      announceMyself();
+      startHeartbeat();
+      setSessionStatus('connected', 'Verbonden — wachten op anderen');
+      document.getElementById('code-pill').textContent = code;
+      document.getElementById('code-input-field').style.display = 'none';
+      document.getElementById('code-display-field').style.display = 'flex';
+      renderTopbarParticipants();
+      if (!resolved) { resolved = true; resolve(true); }
+    });
+
+    socket.addEventListener('message', (e) => {
+      try {
+        const op = JSON.parse(typeof e.data === 'string' ? e.data : '');
+        applyRemoteOp(op);
+      } catch (err) { console.warn('parse op error', err); }
+    });
+
+    socket.addEventListener('close', (e) => {
+      if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
+      // Auto-reconnect if user hasn't explicitly left
+      if (state.roomCode && wsClient === socket) {
+        wsClient = null;
+        setSessionStatus('connecting', 'Verbinding verbroken — opnieuw verbinden...');
+        wsReconnectTimer = setTimeout(() => {
+          if (state.roomCode) joinSessionRoom(state.roomCode);
+        }, 3000);
+      }
+      if (!resolved) { resolved = true; resolve(false); }
+    });
+
+    socket.addEventListener('error', () => { /* close handler covers cleanup */ });
+  });
+}
+
+function leaveSessionRoom() {
+  if (wsReconnectTimer) { clearTimeout(wsReconnectTimer); wsReconnectTimer = null; }
+  if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
+  state.roomCode = null;
+  saveState();
+  if (wsClient) {
+    try { wsClient.close(1000, 'leave'); } catch(e){}
+    wsClient = null;
+  }
+  setSessionStatus('disconnected', 'Niet verbonden — solo werken kan ook');
+  document.getElementById('code-input-field').style.display = '';
+  document.getElementById('code-display-field').style.display = 'none';
+  const cluster = document.getElementById('participants-cluster');
+  if (cluster) cluster.style.display = 'none';
+}
+
+function announceMyself() {
+  const ts = Date.now();
+  state.participants = state.participants || {};
+  state.participants[state.userId] = {
+    name: state.userName || 'Anoniem',
+    role: state.role,
+    lastSeen: ts
+  };
+  saveState();
+  renderTopbarParticipants();
+  publishOp({
+    op: 'participant:announce',
+    name: state.userName || 'Anoniem',
+    role: state.role,
+    ts
+  });
+  refreshConnectionLabel();
+}
+
+function startHeartbeat() {
+  if (heartbeatInterval) clearInterval(heartbeatInterval);
+  heartbeatInterval = setInterval(() => {
+    if (!isWsOpen()) return;
+    announceMyself();
+    pruneStaleParticipants();
+  }, 8000);
+}
+
+function pruneStaleParticipants() {
+  const cutoff = Date.now() - 30000;
+  let changed = false;
+  state.participants = state.participants || {};
+  Object.entries(state.participants).forEach(([uid, p]) => {
+    if (uid !== state.userId && (p.lastSeen || 0) < cutoff) {
+      delete state.participants[uid];
+      changed = true;
+    }
+  });
+  if (changed) {
+    saveState();
+    renderTopbarParticipants();
+  }
+  refreshConnectionLabel();
+}
+
+function refreshConnectionLabel() {
+  if (!isWsOpen()) return;
+  const cutoff = Date.now() - 30000;
+  const onlineCount = Object.values(state.participants || {}).filter(p =>
+    (p.lastSeen || 0) > cutoff
+  ).length;
+  const total = Math.max(1, onlineCount);
+  setSessionStatus('connected', `Verbonden — ${total} ${total === 1 ? 'deelnemer' : 'deelnemers'}`);
+}
+
+function generateRoomCode() {
+  const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // skip O/I to avoid confusion
+  let s = '';
+  for (let i = 0; i < 4; i++) s += letters[Math.floor(Math.random() * letters.length)];
+  return s;
+}
+
+/* =========================================================
+   INIT
+   ========================================================= */
+/* =========================================================
+   HTTPS context detectie + setup modal
+   ========================================================= */
+function initHttpsBanner() {
+  const isFile = location.protocol === 'file:';
+  const banner = document.getElementById('https-banner');
+  const modal  = document.getElementById('https-modal');
+  if (!banner || !modal) return;
+  // Show only when truly opened via file:// (not when served by Node)
+  const isSecure = !isFile;
+
+  const dismissed = sessionStorage.getItem('ceda-https-dismissed') === '1';
+  if (!isSecure && !dismissed) banner.style.display = '';
+
+  document.getElementById('banner-howto').addEventListener('click', () => {
+    modal.style.display = '';
+  });
+  document.getElementById('banner-dismiss').addEventListener('click', () => {
+    banner.style.display = 'none';
+    sessionStorage.setItem('ceda-https-dismissed', '1');
+  });
+  document.getElementById('modal-close').addEventListener('click', () => modal.style.display = 'none');
+  document.getElementById('modal-dismiss').addEventListener('click', () => {
+    modal.style.display = 'none';
+    banner.style.display = 'none';
+    sessionStorage.setItem('ceda-https-dismissed', '1');
+  });
+  document.getElementById('try-localhost').addEventListener('click', () => {
+    window.location.href = 'http://localhost:3000/';
+  });
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) modal.style.display = 'none';
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal.style.display !== 'none') modal.style.display = 'none';
+  });
+}
+
+async function init() {
+  initHttpsBanner();
+
+  // Restore name
+  const nameInput = document.getElementById('user-name');
+  if (state.userName && nameInput) nameInput.value = state.userName;
+
+  // Restore role selection if any
+  if (state.role) {
+    const card = document.querySelector(`.role-card[data-role="${state.role}"]`);
+    if (card) card.classList.add('selected');
+    document.getElementById('role-continue').disabled = false;
+    pendingRole.kans = state.role; pendingRole.uitdaging = state.role;
+  }
+  renderTimer();
+
+  // If there's progress, show topbar
+  if (state.insights.length > 0 || state.role) {
+    document.getElementById('topbar').style.display = 'block';
+  }
+
+  // Auto-reconnect to a previous room (best-effort, non-blocking)
+  if (state.roomCode) {
+    setSessionStatus('connecting', `Herverbinden met sessie ${state.roomCode}...`);
+    document.getElementById('room-code').value = state.roomCode;
+    joinSessionRoom(state.roomCode).then(ok => {
+      if (!ok) toast('Kon niet automatisch herverbinden — start eventueel opnieuw');
+    });
+  }
+
+  // Default mode: join
+  setSessionMode('join');
+
+  // Reveal animations
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('is-visible'); });
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.role-card, .meta-card, .agenda-item').forEach(el => {
+    el.classList.add('reveal');
+    observer.observe(el);
+  });
+  // Howit-steps have their own initial styles in CSS, just observe for is-visible
+  const stepObserver = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('is-visible'); stepObserver.unobserve(e.target); } });
+  }, { threshold: 0.18 });
+  document.querySelectorAll('.howit-step').forEach(el => stepObserver.observe(el));
+}
+init();
+</script>
+</body>
+</html>
