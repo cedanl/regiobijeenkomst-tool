@@ -6,6 +6,7 @@ import { WebSocketServer } from 'ws';
 import http from 'node:http';
 import path from 'node:path';
 import fs from 'node:fs/promises';
+import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -14,6 +15,8 @@ const HOST = process.env.HOST || '0.0.0.0';
 const RECAP_DIR = process.env.RECAP_DIR || path.join(__dirname, 'recaps');
 const ROOM_CODE_RE = /^[A-Z0-9]{3,16}$/;
 const USER_ID_RE = /^[A-Za-z0-9_-]{3,40}$/;
+const ADMIN_USER = process.env.ADMIN_USER || 'ceda';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
 
 // Probe at boot so a misconfigured volume fails fast instead of silently
 // breaking every save during a live workshop. Result is exposed via /healthz.
@@ -129,6 +132,135 @@ app.post('/api/recap', express.json({ limit: '512kb' }), async (req, res) => {
     });
     fs.unlink(tmp).catch(() => {});
     res.status(500).json({ ok: false, error: 'storage failure' });
+  }
+});
+
+// Admin endpoints: list and download saved recaps. Basic auth — set
+// ADMIN_PASSWORD as a Fly secret. If unset, the routes refuse every
+// request rather than running open.
+function requireAdmin(req, res, next) {
+  if (!ADMIN_PASSWORD) {
+    return res.status(503).send('Admin endpoint disabled (set ADMIN_PASSWORD).');
+  }
+  const auth = req.headers.authorization || '';
+  const expected = 'Basic ' + Buffer.from(`${ADMIN_USER}:${ADMIN_PASSWORD}`).toString('base64');
+  const a = Buffer.from(auth);
+  const b = Buffer.from(expected);
+  const ok = a.length === b.length && crypto.timingSafeEqual(a, b);
+  if (!ok) {
+    res.set('WWW-Authenticate', 'Basic realm="recaps"');
+    return res.status(401).send('Authentication required');
+  }
+  next();
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+  ));
+}
+
+app.get('/admin/recaps', requireAdmin, async (req, res) => {
+  let rooms = [];
+  try {
+    rooms = (await fs.readdir(RECAP_DIR, { withFileTypes: true }))
+      .filter(d => d.isDirectory() && ROOM_CODE_RE.test(d.name))
+      .map(d => d.name)
+      .sort();
+  } catch (err) {
+    if (err.code !== 'ENOENT') throw err;
+  }
+  const sections = [];
+  for (const room of rooms) {
+    const dir = path.join(RECAP_DIR, room);
+    let files;
+    try {
+      files = await fs.readdir(dir);
+    } catch { continue; }
+    const jsons = files.filter(f => f.endsWith('.json'));
+    if (!jsons.length) continue;
+    const items = [];
+    for (const f of jsons) {
+      const stat = await fs.stat(path.join(dir, f)).catch(() => null);
+      if (!stat) continue;
+      let saved = null;
+      let userName = null;
+      try {
+        const parsed = JSON.parse(await fs.readFile(path.join(dir, f), 'utf8'));
+        saved = parsed.savedAt;
+        userName = parsed.state?.userName;
+      } catch {}
+      items.push({ file: f, size: stat.size, mtime: stat.mtime, saved, userName });
+    }
+    items.sort((a, b) => (b.mtime > a.mtime ? 1 : -1));
+    sections.push({ room, items });
+  }
+
+  const html = `<!doctype html>
+<html lang="nl"><head>
+<meta charset="utf-8">
+<title>Recaps · CEDA Regiobijeenkomst</title>
+<style>
+  :root { color-scheme: light; }
+  body { font: 15px/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 960px; margin: 32px auto; padding: 0 24px; color: #1a1a1a; }
+  h1 { font-size: 22px; margin: 0 0 8px; }
+  .lede { color: #666; margin: 0 0 32px; }
+  .room { border: 1px solid #ddd; border-radius: 8px; padding: 16px 20px; margin-bottom: 16px; background: #fafafa; }
+  .room h2 { margin: 0 0 12px; font-size: 16px; font-family: ui-monospace, SFMono-Regular, Meno, monospace; letter-spacing: 1px; }
+  .room .meta { color: #777; font-size: 13px; margin-left: 8px; font-family: -apple-system, sans-serif; letter-spacing: 0; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #eee; font-size: 14px; }
+  th { color: #666; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .5px; }
+  a { color: #0a58ca; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .empty { color: #888; font-style: italic; padding: 24px; text-align: center; background: #fafafa; border-radius: 8px; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+</style>
+</head><body>
+<h1>Recaps · CEDA Regiobijeenkomst</h1>
+<p class="lede">Per bijeenkomst (sessiecode) zie je hieronder welke deelnemers hun oogst centraal hebben opgeslagen. Klik op een bestand om de JSON te downloaden.</p>
+${sections.length === 0
+  ? `<p class="empty">Nog geen recaps opgeslagen.</p>`
+  : sections.map(s => `
+<section class="room">
+  <h2>${escapeHtml(s.room)} <span class="meta">${s.items.length} deelnemer${s.items.length === 1 ? '' : 's'}</span></h2>
+  <table>
+    <thead><tr><th>Deelnemer</th><th>Opgeslagen</th><th>Grootte</th><th>Bestand</th></tr></thead>
+    <tbody>
+    ${s.items.map(i => `<tr>
+      <td>${escapeHtml(i.userName || '—')}</td>
+      <td>${escapeHtml(i.saved ? new Date(i.saved).toLocaleString('nl-NL') : '—')}</td>
+      <td>${(i.size / 1024).toFixed(1)} KB</td>
+      <td><a href="/admin/recaps/${encodeURIComponent(s.room)}/${encodeURIComponent(i.file)}"><code>${escapeHtml(i.file)}</code></a></td>
+    </tr>`).join('')}
+    </tbody>
+  </table>
+</section>`).join('')}
+</body></html>`;
+  res.set('Content-Type', 'text/html; charset=utf-8');
+  res.set('Cache-Control', 'no-store');
+  res.send(html);
+});
+
+app.get('/admin/recaps/:room/:file', requireAdmin, async (req, res) => {
+  const room = String(req.params.room).toUpperCase();
+  const file = String(req.params.file);
+  if (!ROOM_CODE_RE.test(room)) return res.status(400).send('invalid room');
+  if (!/^[A-Za-z0-9_-]{3,40}\.json$/.test(file)) return res.status(400).send('invalid file');
+  const full = path.join(RECAP_DIR, room, file);
+  // Defense-in-depth: ensure the resolved path stays under RECAP_DIR.
+  const resolved = path.resolve(full);
+  if (!resolved.startsWith(path.resolve(RECAP_DIR) + path.sep)) {
+    return res.status(400).send('invalid path');
+  }
+  try {
+    const data = await fs.readFile(resolved);
+    res.set('Content-Type', 'application/json');
+    res.set('Content-Disposition', `attachment; filename="${room}_${file}"`);
+    res.send(data);
+  } catch (err) {
+    if (err.code === 'ENOENT') return res.status(404).send('not found');
+    throw err;
   }
 });
 

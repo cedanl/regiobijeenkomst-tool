@@ -43,6 +43,8 @@ URL: https://localhost:8443
 - `GET /healthz` → `{ ok: true, rooms: N }`
 - `GET /api/stats` → aantal rooms + peers per room (geen content)
 - `POST /api/recap` → opt-in eindoogst opslaan (body = participant state JSON)
+- `GET /admin/recaps` → browse-UI voor admins (basic-auth via `ADMIN_PASSWORD`)
+- `GET /admin/recaps/:room/:file` → JSON-download per recap-bestand
 - `WS /ws?room=<CODE>` → relay (broadcast naar andere peers in zelfde room)
 
 ## Beveiliging & privacy
@@ -72,7 +74,26 @@ recaps/
     u_yyyyy.json   # ← deelnemer 2, laatste save
 ```
 
-Achteraf binnenhalen (Fly.io):
+### Resultaten bekijken na afloop
+
+Twee manieren, kies wat past:
+
+**Via de browser** — open `/admin/recaps` op de live URL en log in met
+basic-auth. Lijst van alle bijeenkomsten met deelnemers per sessie; klik
+op een bestand om de JSON te downloaden. Vereist dat `ADMIN_PASSWORD`
+als env-var of Fly-secret is gezet — als die ontbreekt staat de hele
+admin-route uit (503).
+
+```
+fly secrets set ADMIN_PASSWORD='kies-een-sterk-wachtwoord' -a ceda-regiobijeenkomst
+```
+
+Default username is `ceda` (overschrijven via `ADMIN_USER`). Het kader
+boven de save-knop in de app maakt geen melding van dit endpoint — het
+is bedoeld voor jullie als facilitators/admins, niet voor deelnemers.
+
+**Via CLI / bulk-export** — voor analyse-pipelines of een complete kopie:
+
 ```
 fly ssh console -C "tar -C /data/recaps -czf - ." > recaps-$(date +%F).tgz
 ```
