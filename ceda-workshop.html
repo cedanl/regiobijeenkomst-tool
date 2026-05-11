@@ -2268,6 +2268,7 @@
       <button class="btn btn-yellow" id="export-json"><i class="fa-solid fa-download"></i> Download als JSON</button>
       <button class="btn btn-green" id="export-text"><i class="fa-solid fa-file-lines"></i> Download als tekst</button>
       <button class="btn btn-ghost" id="print-recap"><i class="fa-solid fa-print"></i> Print / PDF</button>
+      <button class="btn btn-ghost" id="save-recap" title="Opslaan op de workshop-server zodat CEDA de oogst later kan analyseren"><i class="fa-solid fa-cloud-arrow-up"></i> Oogst opslaan voor analyse</button>
       <button class="btn btn-ghost" id="reset-all" style="margin-left:auto;"><i class="fa-solid fa-trash-can"></i> Workshop resetten</button>
     </div>
   </div>
@@ -3176,6 +3177,43 @@ function renderRecap() {
 document.getElementById('export-json').addEventListener('click', () => {
   const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
   download(blob, `ceda-workshop-${ymd()}.json`);
+});
+document.getElementById('save-recap').addEventListener('click', async (e) => {
+  if (!state.roomCode) {
+    toast('Geen sessie actief — kan niet centraal opslaan.');
+    return;
+  }
+  const btn = e.currentTarget;
+  const original = btn.innerHTML;
+  const restore = () => { btn.innerHTML = original; btn.disabled = false; };
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Opslaan…';
+  try {
+    const res = await fetch('/api/recap', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(state)
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.ok) {
+      toast('Oogst opgeslagen voor CEDA-analyse. Bedankt!');
+      btn.innerHTML = '<i class="fa-solid fa-check"></i> Opgeslagen';
+      setTimeout(restore, 4000);
+    } else if (res.status >= 400 && res.status < 500) {
+      // 4xx: validation problem — retrying won't help, ask the user to escalate.
+      toast(`Opslaan geweigerd (${data.error || res.status}). Neem contact op met de facilitator.`);
+      restore();
+    } else {
+      // 5xx or unparseable response — retry is reasonable.
+      toast('Opslaan mislukt — probeer het zo opnieuw.');
+      restore();
+    }
+  } catch (err) {
+    // Network failure (no response). Don't leak browser-specific strings.
+    console.error('[recap] save failed', err);
+    toast('Opslaan mislukt — controleer je verbinding en probeer opnieuw.');
+    restore();
+  }
 });
 document.getElementById('export-text').addEventListener('click', () => {
   let t = `CEDA Regiobijeenkomst — Workshop oogst\nDatum: ${new Date().toLocaleString('nl-NL')}\nSessie: ${state.roomCode || 'solo'}\nDeelnemer: ${state.userName || '-'} (${state.role || '-'})\n\n`;
