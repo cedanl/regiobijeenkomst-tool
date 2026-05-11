@@ -13,6 +13,8 @@ caddy run             # optional HTTPS frontend on :8443 → proxies to :3000
 
 No lint, no test, no build step — the frontend ships as-is. Inspect a running server via `GET /healthz` and `GET /api/stats`. Opt-in central harvest at `POST /api/recap` (stores `<RECAP_DIR>/<room>/<userId>.json`).
 
+Admin browse-UI at `GET /admin/recaps` lists saved recaps with per-file download links. Basic-auth via `ADMIN_USER` (default `ceda`) and `ADMIN_PASSWORD`; if `ADMIN_PASSWORD` is unset the route refuses every request rather than running open.
+
 Production deploy: `Dockerfile` + `fly.toml` target Fly.io regio `ams` with a `recaps` volume mounted at `/data`.
 
 ## Architecture
