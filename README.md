@@ -54,8 +54,9 @@ URL: https://localhost:8443
 - **Live-verkeer** wordt niet gelogd of opgeslagen — alleen doorgegeven.
 - **Eindoogst** wordt alleen centraal opgeslagen als een deelnemer in de recap-fase
   expliciet op *Oogst opslaan voor analyse* klikt. Files belanden in `RECAP_DIR`
-  (default `./recaps`) als `<roomCode>/<userId>.json`. Communiceer dit vooraf
-  aan deelnemers.
+  (default `./recaps`) als `<roomCode>/<userId>.json`. De UI zelf legt deze
+  consent uit in een kader direct boven de knop — de bedoeling is dat
+  deelnemers daar geïnformeerd worden, niet via een aparte facilitator-brief.
 
 ## Centrale oogst voor analyse
 

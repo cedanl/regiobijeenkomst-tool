@@ -1449,6 +1449,20 @@
   .actions-bar .btn-ghost { color: var(--np-wit); border-color: rgba(255,255,255,0.4); }
   .actions-bar .btn-ghost:hover { background: rgba(255,255,255,0.1); }
 
+  .consent-kader {
+    display: flex; gap: var(--space-4); align-items: flex-start;
+    margin-top: var(--space-6);
+    padding: var(--space-4) var(--space-5);
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.18);
+    border-left: 4px solid var(--np-geel);
+    border-radius: 8px;
+    color: rgba(255,255,255,0.92);
+    font-size: 14px; line-height: 1.55;
+  }
+  .consent-kader i.fa-circle-info { color: var(--np-geel); font-size: 18px; margin-top: 2px; }
+  .consent-kader strong { color: var(--np-wit); }
+
   /* Decorative shapes (SVG inline placement helpers) */
   .deco { position: absolute; pointer-events: none; z-index: 0; }
   .stage-content { position: relative; z-index: 1; }
@@ -1849,7 +1863,7 @@
           <span class="privacy-eyebrow"><i class="fa-solid fa-lock"></i> Privacy</span>
           <h3>Jullie antwoorden blijven volledig in je eigen browser.</h3>
           <p class="privacy-lede">
-            Live-updates lopen via je eigen Node.js-server (WebSocket-relay), die alleen berichten doorgeeft aan deelnemers in dezelfde sessiecode — niets wordt bewaard, gelogd of opgeslagen. Pas wanneer je in de recap zelf kiest voor <em>Download als JSON</em>, <em>Download als tekst</em> of <em>Print als PDF</em> verlaat je oogst je apparaat.
+            Live-updates lopen via een WebSocket-relay die alleen berichten doorgeeft aan deelnemers in dezelfde sessiecode — die relay zelf bewaart, logt of slaat niets op. Aan het einde, in de recap, kies je zelf hoe je oogst je apparaat verlaat: <em>Download als JSON</em>, <em>Download als tekst</em>, <em>Print als PDF</em>, of <em>Oogst opslaan voor analyse</em> (die laatste stuurt je oogst expliciet naar de CEDA-server voor latere analyse).
           </p>
           <div class="privacy-promises">
             <div class="privacy-promise">
@@ -2264,11 +2278,18 @@
 
     <div id="recap-cases" class="recap-cases"></div>
 
+    <div class="consent-kader">
+      <i class="fa-solid fa-circle-info"></i>
+      <div>
+        <strong>Oogst opslaan voor analyse</strong> stuurt jouw workshop-resultaten (inzichten, stemmen, use cases) naar de CEDA-server zodat we ze later kunnen samenvoegen en analyseren — vrijwillig, alleen als jij op de knop klikt. Wil je dit niet? Gebruik dan een van de download-opties hieronder; die blijven volledig op je eigen apparaat.
+      </div>
+    </div>
+
     <div class="actions-bar">
       <button class="btn btn-yellow" id="export-json"><i class="fa-solid fa-download"></i> Download als JSON</button>
       <button class="btn btn-green" id="export-text"><i class="fa-solid fa-file-lines"></i> Download als tekst</button>
       <button class="btn btn-ghost" id="print-recap"><i class="fa-solid fa-print"></i> Print / PDF</button>
-      <button class="btn btn-ghost" id="save-recap" title="Opslaan op de workshop-server zodat CEDA de oogst later kan analyseren"><i class="fa-solid fa-cloud-arrow-up"></i> Oogst opslaan voor analyse</button>
+      <button class="btn btn-ghost" id="save-recap" title="Opslaan op de CEDA-server zodat CEDA de oogst later kan analyseren"><i class="fa-solid fa-cloud-arrow-up"></i> Oogst opslaan voor analyse</button>
       <button class="btn btn-ghost" id="reset-all" style="margin-left:auto;"><i class="fa-solid fa-trash-can"></i> Workshop resetten</button>
     </div>
   </div>
