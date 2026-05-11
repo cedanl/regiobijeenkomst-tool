@@ -13,6 +13,7 @@ Werksessie waarin de bestaande Node.js workshop-tool een werkende eerste publiek
 
 - Repo: [`cedanl/regiobijeenkomst-tool`](https://github.com/cedanl/regiobijeenkomst-tool)
 - Live URL: <https://ceda-regiobijeenkomst.fly.dev/>
+- Admin-UI voor opgeslagen recaps: <https://ceda-regiobijeenkomst.fly.dev/admin/recaps> (basic-auth, wachtwoord buiten dit logboek gedeeld)
 - Fly.io app `ceda-regiobijeenkomst` in regio `ams`, met persistent volume `recaps` (1 GB) op `/data`
 - `CLAUDE.md` voor toekomstige Claude-sessies
 - Repo-admins: `EdF2021`, `EdwinLieftink`, `CorneeldH`
@@ -47,6 +48,34 @@ Eerste versie van `POST /api/recap` deed `mkdir` lazy in de request handler. Bij
 
 `fs.writeFile` naar het definitieve pad opent met `O_TRUNC`. Een crash, SIGTERM of OOM mid-write zou een geldig recap-bestand kunnen vervangen door een truncated bestand. Fix: schrijf naar `<file>.<pid>.<ts>.tmp` en `fs.rename` aan het eind — rename is atomic op POSIX.
 
+## Vervolg later op dezelfde dag
+
+Na de eerste MVP-launch zijn er nog twee features ingevlogen en zijn de team-permissies geregeld.
+
+### PR #7 — Consent-kader bij de save-knop (closes #4)
+
+Inline tekstkader boven de actions-bar in de recap-stage, twee zinnen die uitleggen wat *Oogst opslaan voor analyse* doet en dat het vrijwillig is. Vervangt de eerdere tooltip-only aanpak. Ook de welkomstpagina-privacy-callout bijgewerkt: die zei nog "niets wordt bewaard, gelogd of opgeslagen" en somde alleen de download-opties op; nu noemt-ie *Oogst opslaan voor analyse* expliciet als vierde exportoptie.
+
+### Repo-admins toegevoegd
+
+`EdwinLieftink` (Edwin Lieftink, SURF) en `CorneeldH` (Corneel den Hartogh, CEDA) kregen `admin` op de repo via `gh api PUT repos/.../collaborators/<user>`. Beiden waren al cedanl-org-leden, dus geen org-invite nodig. Fly-toegang volgt los — gevangen in issue #8.
+
+### PR #9 — Admin browse-UI voor opgeslagen recaps
+
+`GET /admin/recaps` toont een HTML-overzicht van alle bijeenkomsten met per sessie de deelnemers die hun oogst hebben opgeslagen. Klik op een bestand → JSON-download via `GET /admin/recaps/:room/:file`. Basic-auth via `ADMIN_USER` (default `ceda`) en `ADMIN_PASSWORD`. Zonder password staat de hele admin-route uit (HTTP 503) zodat een verkeerd geconfigureerde deploy nooit per ongeluk open kan staan. Timing-safe vergelijking via `crypto.timingSafeEqual`; defense-in-depth in de download-handler (regex op room+file, `path.resolve` + `startsWith(RECAP_DIR)`).
+
+`ADMIN_PASSWORD` gegenereerd via `openssl rand -base64 24`, gezet via `flyctl secrets set`, niet in het logboek bewaard.
+
+### Waarom geen GitHub als opslag-laag
+
+Eddef vroeg of de recaps niet beter naar een GitHub-repo konden zodat Edwin/Corneel direct in de browser zouden kunnen kijken. Drie redenen om dat niet te doen:
+
+1. **AVG**: recaps bevatten deelnemer-namen + rollen + open-tekst antwoorden. Publieke GitHub-repo niet geschikt; private repo wel, maar dan is GitHub een verwerker en zit je nog met de vraag of dat past binnen jullie AVG-afspraken.
+2. **Token-beheer**: Fly-server zou een GitHub-token met schrijfrechten nodig hebben — leverbaar maar een credential die je dan moet roteren.
+3. **Schrijfconflicten**: gelijktijdige saves van twee deelnemers = parallelle `git push`'es met fast-forward errors. Op te lossen met retry-logic, maar plotseling veel meer code dan een `fs.writeFile`.
+
+De admin browse-UI lost het onderliggende doel (Edwin/Corneel zonder CLI bij de data) op zonder al deze trade-offs.
+
 ## Open follow-ups
 
 | # | Titel |
@@ -55,9 +84,14 @@ Eerste versie van `POST /api/recap` deed `mkdir` lazy in de request handler. Bij
 | #3 | Reproduceerbare end-to-end smoke test in de repo |
 | #5 | `recaps_to_csv` conversiescript |
 | #6 | SURF Research Cloud deployment als AVG-bewust alternatief |
-| #8 | Fly.io-toegang delen met Edwin en Corneel (verhuizen naar CEDA Fly-org, of co-admins op personal) |
+| #8 | Fly.io-toegang delen met Edwin en Corneel |
+| ✓ | ~~#4 Consent-kader~~ — gesloten via PR #7 |
 
 ## Recap-bestanden ophalen na een bijeenkomst
+
+**Via de browser** — `https://ceda-regiobijeenkomst.fly.dev/admin/recaps` (basic-auth). Lijst van alle bijeenkomsten met per sessie deelnemer, save-tijd, en download-link per file.
+
+**Via CLI** — voor bulk-export naar een tarball:
 
 ```bash
 flyctl ssh console -a ceda-regiobijeenkomst -C "tar -C /data/recaps -czf - ." > recaps-$(date +%F).tgz
