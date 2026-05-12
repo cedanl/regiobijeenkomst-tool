@@ -1,8 +1,8 @@
 # CEDA Regiobijeenkomst — HTTPS via Caddy
 
-Deze map bevat een **Caddyfile** waarmee je de workshop-app over HTTPS draait,
-in plaats van vanuit `file://` rechtstreeks in de browser. Caddy regelt
-certificaten automatisch — lokaal én publiek.
+De repo bevat een **Caddyfile** (in `docker/`) waarmee je de workshop-app over
+HTTPS draait, in plaats van vanuit `file://` rechtstreeks in de browser.
+Caddy regelt certificaten automatisch — lokaal én publiek.
 
 ## Waarom HTTPS?
 
@@ -44,19 +44,19 @@ of via *winget*:
 **Aanbevolen route — geen terminal-kennis nodig:**
 
 1. Open de map *CEDA | Regiobijeenkomst - Tool* in Finder.
-2. Dubbelklik op **`Start Workshop.command`**.
+2. Dubbelklik op **`app/Start Workshop.command`**.
 3. De launcher checkt of Caddy is geïnstalleerd (zo niet → installeert via Homebrew),
    start de server, en opent je browser op **https://localhost:8443**.
 4. macOS vraagt eenmalig je wachtwoord voor het lokale certificaat in Keychain.
 
 > Eerste keer: Gatekeeper kan vragen om bevestiging. Rechtsklik op het bestand → **Open**, of
-> draai in Terminal eenmalig: `chmod +x "Start Workshop.command"`.
+> draai in Terminal eenmalig: `chmod +x "app/Start Workshop.command"`.
 
-**Alternatief — via terminal:**
+**Alternatief — via terminal (vanaf repo-root):**
 
-    ./start-caddy.sh
+    docker/start-caddy.sh
     # of
-    caddy run
+    caddy run --config docker/Caddyfile
 
 URL: **https://localhost:8443**
 
@@ -71,11 +71,12 @@ Wil je de workshop-app via een publieke URL aanbieden (bv.
 1. **DNS:** zet een A-record dat het domein naar het IP-adres van je server
    wijst.
 2. **Firewall:** open poort **80** en **443** naar de server.
-3. **Caddyfile:** vervang in *Caddyfile* `localhost` door je domein.
+3. **Caddyfile:** vervang in *docker/Caddyfile* `localhost` door je domein.
    Of gebruik de *Productie-template* die onderaan het bestand al klaar staat.
-4. **Start Caddy:** `caddy run` (interactief) of installeer als systemd-service:
+4. **Start Caddy:** `caddy run --config docker/Caddyfile` (interactief) of
+   installeer als systemd-service:
 
-       sudo cp Caddyfile /etc/caddy/Caddyfile
+       sudo cp docker/Caddyfile /etc/caddy/Caddyfile
        sudo systemctl enable --now caddy
 
 Caddy haalt automatisch een **Let's Encrypt** certificaat op zodra het
@@ -111,7 +112,7 @@ apparaten installeren — of gebruik een publiek domein.
 voor die poort.
 
 **Vraag:** Wat als CSP iets blokkeert dat ik wel nodig heb?
-**Antwoord:** Pas de `Content-Security-Policy` regel in *Caddyfile* aan.
+**Antwoord:** Pas de `Content-Security-Policy` regel in *docker/Caddyfile* aan.
 De `connect-src` directive bevat de toegestane MQTT-brokers — voeg er
 nieuwe toe als je een andere broker gebruikt.
 

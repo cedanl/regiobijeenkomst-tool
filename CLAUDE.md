@@ -5,21 +5,27 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```
-npm install
-npm start             # node server.js  (PORT=3000, HOST=0.0.0.0)
-npm run dev           # node --watch server.js
-caddy run             # optional HTTPS frontend on :8443 → proxies to :3000
+cd app && npm install
+cd app && npm start             # node server.js  (PORT=3000, HOST=0.0.0.0)
+cd app && npm run dev           # node --watch server.js
+caddy run --config docker/Caddyfile   # optional HTTPS frontend on :8443 → proxies to :3000
 ```
 
-No lint, no test, no build step — the frontend ships as-is. Inspect a running server via `GET /healthz` and `GET /api/stats`. Opt-in central harvest at `POST /api/recap` (stores `<RECAP_DIR>/<room>/<userId>.json`).
+No lint, no test, no build step — the frontend ships as-is. Inspect a running server via `GET /healthz` and `GET /api/stats`. Opt-in central harvest at `POST /api/recap` (stores `<RECAP_DIR>/<room>/<userId>.json`; default lokaal `./data/recaps/`, productie `/data/recaps`).
 
 Admin browse-UI at `GET /admin/recaps` lists saved recaps with per-file download links. Basic-auth via `ADMIN_USER` (default `ceda`) and `ADMIN_PASSWORD`; if `ADMIN_PASSWORD` is unset the route refuses every request rather than running open.
 
-Production deploy: `Dockerfile` + `fly.toml` target Fly.io regio `ams` with a `recaps` volume mounted at `/data`.
+Production deploy: `docker/Dockerfile` + `docker/fly.toml` target Fly.io regio `ams` with a `recaps` volume mounted at `/data`. Build vanaf repo-root: `docker build -f docker/Dockerfile .`; deploy: `fly deploy --config docker/fly.toml`.
 
 ## Architecture
 
-A **two-file app**: `server.js` + `ceda-workshop.html`. No framework, no bundler, no database. Most changes touch both files — treat them as a pair.
+A **two-file app** in `app/`: `server.js` + `ceda-workshop.html`. No framework, no bundler, no database. Most changes touch both files — treat them as a pair.
+
+Repo-layout:
+- `app/` — applicatiecode (server + frontend + npm-manifest + macOS launcher)
+- `docker/` — Dockerfile, entrypoint, fly.toml, Caddyfile
+- `docs/` — documentatie en sessieverslagen
+- `data/` — lokale recap-opslag (gitignored)
 
 ### `server.js` — Express + WebSocket relay
 - Serves the single HTML page with strict CSP / security headers.
@@ -42,9 +48,9 @@ A **two-file app**: `server.js` + `ceda-workshop.html`. No framework, no bundler
 ### Rules of thumb
 - New collaborative feature → define a new `op:` type, broadcast it from the actor, handle it in `applyRemoteOp`. Do **not** add server-side handling — keep the relay dumb.
 - The Node process is fungible: restarting it disconnects clients, they auto-rejoin and re-sync via the handshake.
-- CSP lives in **both** `server.js` and `Caddyfile` — change it in both, since either may serve the page.
+- CSP lives in **both** `app/server.js` and `docker/Caddyfile` — change it in both, since either may serve the page.
 
 ## Conventions
 - ES modules, Node ≥ 18.
 - User-facing strings (UI, console banner, even most code comments) are in Dutch — keep them Dutch.
-- `Start Workshop.command` is the macOS double-click launcher end-users actually use; edit carefully.
+- `app/Start Workshop.command` is the macOS double-click launcher end-users actually use; edit carefully.

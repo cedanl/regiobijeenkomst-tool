@@ -6,11 +6,11 @@ RUN apk add --no-cache su-exec
 
 WORKDIR /app
 
-COPY --chown=node:node package.json package-lock.json ./
+COPY --chown=node:node app/package.json app/package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 
-COPY --chown=node:node server.js ceda-workshop.html ./
-COPY entrypoint.sh /entrypoint.sh
+COPY --chown=node:node app/server.js app/ceda-workshop.html ./
+COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 # RECAP_DIR points inside the Fly volume mount declared in fly.toml.
