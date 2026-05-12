@@ -15,7 +15,7 @@ No lint, no test, no build step — the frontend ships as-is. Inspect a running 
 
 Admin browse-UI at `GET /admin/recaps` lists saved recaps with per-file download links. Basic-auth via `ADMIN_USER` (default `ceda`) and `ADMIN_PASSWORD`; if `ADMIN_PASSWORD` is unset the route refuses every request rather than running open.
 
-Production deploy: `docker/Dockerfile` + `docker/fly.toml` target Fly.io regio `ams` with a `recaps` volume mounted at `/data`. Build vanaf repo-root: `docker build -f docker/Dockerfile .`; deploy: `fly deploy --config docker/fly.toml`.
+Production deploy: `docker/Dockerfile` + `fly.toml` (root) target Fly.io regio `ams` with a `recaps` volume mounted at `/data`. Build vanaf repo-root: `docker build -f docker/Dockerfile .`; deploy: `fly deploy`. `fly.toml` moet in build-context root staan — Fly resolveert `dockerfile` relatief aan zijn eigen locatie.
 
 ## Architecture
 

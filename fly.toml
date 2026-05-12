@@ -3,10 +3,14 @@
 # regio uit dit bestand of overschrijf naar wens). Draai alle commando's
 # vanaf de repo-root:
 #   1. fly auth login
-#   2. fly launch --copy-config --no-deploy --config docker/fly.toml
-#   3. fly volumes create recaps --region ams --size 1 --config docker/fly.toml
-#   4. fly deploy --config docker/fly.toml
-# Daarna: nieuwe builds via `fly deploy --config docker/fly.toml`.
+#   2. fly launch --copy-config --no-deploy
+#   3. fly volumes create recaps --region ams --size 1
+#   4. fly deploy
+# Daarna: nieuwe builds via `fly deploy`.
+#
+# fly.toml hoort in de build-context root (Fly resolveert het dockerfile-pad
+# relatief aan deze map). Daarom blijft fly.toml in root; de Dockerfile zelf
+# leeft wel in docker/.
 #
 # Recaps ophalen voor analyse:
 #   fly ssh console -C "tar -C /data/recaps -czf - ." > recaps.tgz

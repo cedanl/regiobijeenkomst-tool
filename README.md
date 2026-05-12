@@ -108,12 +108,12 @@ fly ssh console -C "tar -C /data/recaps -czf - ." > recaps-$(date +%F).tgz
 
 ```
 fly auth login
-fly launch --copy-config --no-deploy --config docker/fly.toml
-fly volumes create recaps --region ams --size 1 --config docker/fly.toml
-fly deploy --config docker/fly.toml
+fly launch --copy-config --no-deploy
+fly volumes create recaps --region ams --size 1
+fly deploy
 ```
 
-`docker/fly.toml` mount het volume op `/data`; de server schrijft naar `/data/recaps`.
+`fly.toml` (in repo-root) mount het volume op `/data`; de server schrijft naar `/data/recaps`.
 
 ### Eigen VPS
 

@@ -42,19 +42,19 @@ je environment; zonder is de admin-route uit).
 
 ## Deploy naar Fly.io
 
-Alle commando's vanaf repo-root:
+Vanaf repo-root:
 
 ```
-fly deploy --config docker/fly.toml
+fly deploy
 ```
 
 Eerste keer setup:
 
 ```
 fly auth login
-fly launch --copy-config --no-deploy --config docker/fly.toml
-fly volumes create recaps --region ams --size 1 --config docker/fly.toml
-fly deploy --config docker/fly.toml
+fly launch --copy-config --no-deploy
+fly volumes create recaps --region ams --size 1
+fly deploy
 ```
 
 ## Docker-image lokaal bouwen
