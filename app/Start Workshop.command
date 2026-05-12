@@ -75,7 +75,7 @@ CADDY_PID=""
 URL="http://localhost:3000"
 if command -v caddy >/dev/null 2>&1; then
     echo -e "  ${Y}▶${N} Caddy starten (HTTPS-frontend op poort 8443)..."
-    caddy run --config Caddyfile --adapter caddyfile > /tmp/ceda-caddy.log 2>&1 &
+    caddy run --config ../docker/Caddyfile --adapter caddyfile > /tmp/ceda-caddy.log 2>&1 &
     CADDY_PID=$!
     sleep 2
     if curl -sk --max-time 1 "https://localhost:8443/healthz" -o /dev/null 2>&1; then

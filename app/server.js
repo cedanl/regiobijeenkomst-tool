@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
-const RECAP_DIR = process.env.RECAP_DIR || path.join(__dirname, 'recaps');
+const RECAP_DIR = process.env.RECAP_DIR || path.join(__dirname, '..', 'data', 'recaps');
 const ROOM_CODE_RE = /^[A-Z0-9]{3,16}$/;
 const USER_ID_RE = /^[A-Za-z0-9_-]{3,40}$/;
 const ADMIN_USER = process.env.ADMIN_USER || 'ceda';
