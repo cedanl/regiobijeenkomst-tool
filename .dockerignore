@@ -1,17 +1,20 @@
 .git
 .gitignore
 .dockerignore
-Dockerfile
-fly.toml
+docker/Dockerfile
+docker/fly.toml
+docker/Caddyfile
+docker/start-caddy.sh
+app/node_modules
 node_modules
 npm-debug.log*
 .DS_Store
 .env
 .env.local
 *.log
-recaps
+data
 README*.md
+INSTRUCTIONS.md
 CLAUDE.md
-Caddyfile
-start-caddy.sh
-Start Workshop.command
+docs
+app/Start Workshop.command
