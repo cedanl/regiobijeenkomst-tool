@@ -5,7 +5,7 @@ Live samenwerking via WebSocket-relay, eigen Node-server, optioneel Caddy ervoor
 
 ## Snelstart
 
-Dubbelklik op **`Start Workshop.command`**. Dat regelt alles:
+Dubbelklik op **`app/Start Workshop.command`**. Dat regelt alles:
 
 1. Checkt Node.js (installeert via Homebrew als nodig).
 2. `npm install` voor dependencies (eenmalig).
@@ -15,16 +15,19 @@ Dubbelklik op **`Start Workshop.command`**. Dat regelt alles:
 
 Sluit het Terminal-venster om beide servers te stoppen.
 
+Zie ook [`INSTRUCTIONS.md`](INSTRUCTIONS.md) voor een korte commando-quickstart.
+
 ## Handmatig
 
+    cd app
     npm install
     npm start
 
 URL: http://localhost:3000
 
-Voor HTTPS via Caddy:
+Voor HTTPS via Caddy (vanuit repo-root):
 
-    caddy run
+    caddy run --config docker/Caddyfile
 
 URL: https://localhost:8443
 
@@ -32,10 +35,10 @@ URL: https://localhost:8443
 
 | Component | Rol |
 |---|---|
-| `server.js` | Express + WebSocket-relay. Serveert `ceda-workshop.html`, broadcast berichten binnen sessiecode. |
-| `ceda-workshop.html` | Frontend (single-file). Verbindt via `ws://host/ws?room=<CODE>`. |
-| `Caddyfile` | Optionele HTTPS-frontend met security-headers, reverse-proxied naar Node. |
-| `Start Workshop.command` | macOS-launcher. Doet `npm install`, start beide servers, opent browser. |
+| `app/server.js` | Express + WebSocket-relay. Serveert `ceda-workshop.html`, broadcast berichten binnen sessiecode. |
+| `app/ceda-workshop.html` | Frontend (single-file). Verbindt via `ws://host/ws?room=<CODE>`. |
+| `docker/Caddyfile` | Optionele HTTPS-frontend met security-headers, reverse-proxied naar Node. |
+| `app/Start Workshop.command` | macOS-launcher. Doet `npm install`, start beide servers, opent browser. |
 
 ## Endpoints
 
@@ -56,7 +59,8 @@ URL: https://localhost:8443
 - **Live-verkeer** wordt niet gelogd of opgeslagen — alleen doorgegeven.
 - **Eindoogst** wordt alleen centraal opgeslagen als een deelnemer in de recap-fase
   expliciet op *Oogst opslaan voor analyse* klikt. Files belanden in `RECAP_DIR`
-  (default `./recaps`) als `<roomCode>/<userId>.json`. De UI zelf legt deze
+  (default lokaal: `./data/recaps`, productie: `/data/recaps`) als
+  `<roomCode>/<userId>.json`. De UI zelf legt deze
   consent uit in een kader direct boven de knop — de bedoeling is dat
   deelnemers daar geïnformeerd worden, niet via een aparte facilitator-brief.
 
@@ -104,21 +108,21 @@ fly ssh console -C "tar -C /data/recaps -czf - ." > recaps-$(date +%F).tgz
 
 ```
 fly auth login
-fly launch --copy-config --no-deploy
-fly volumes create recaps --region ams --size 1
-fly deploy
+fly launch --copy-config --no-deploy --config docker/fly.toml
+fly volumes create recaps --region ams --size 1 --config docker/fly.toml
+fly deploy --config docker/fly.toml
 ```
 
-`fly.toml` mount het volume op `/data`; de server schrijft naar `/data/recaps`.
+`docker/fly.toml` mount het volume op `/data`; de server schrijft naar `/data/recaps`.
 
 ### Eigen VPS
 
-1. Vervang in `Caddyfile` `localhost:8443` door je domein.
+1. Vervang in `docker/Caddyfile` `localhost:8443` door je domein.
 2. Zorg voor DNS A-record + open poort 80/443.
 3. Draai Node als systemd-service of via `pm2`/`launchd`.
 4. Caddy regelt Let's Encrypt automatisch.
 
-Zie `README-caddy.md` voor uitgebreide HTTPS-instructies.
+Zie `docs/README-caddy.md` voor uitgebreide HTTPS-instructies.
 
 ## Vereisten
 
