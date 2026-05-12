@@ -72,7 +72,7 @@ Per deelnemer wordt één bestand bewaard; herhaald opslaan overschrijft.
 
 Layout op disk:
 ```
-recaps/
+data/recaps/
   <ROOMCODE>/
     u_xxxxx.json   # ← deelnemer 1, laatste save
     u_yyyyy.json   # ← deelnemer 2, laatste save
