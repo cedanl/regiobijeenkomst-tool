@@ -111,11 +111,11 @@ function withRoomLock(room, fn) {
   return next;
 }
 
-// Opt-in central harvest. Each participant POSTs their own state from the
-// recap stage. Files land in RECAP_DIR/<roomCode>/<userId>.json — re-saves
-// from the same participant overwrite their previous file (latest wins).
-// Write is staged via a sibling .tmp file + rename so a crash mid-write
-// never replaces the previous good save with a truncated one.
+// Periodic central harvest. Each participant POSTs their full state from
+// the workshop (debounced + heartbeat from the client). The server merges
+// per-userId into RECAP_DIR/<room>/state.json under a per-room mutex.
+// Write is staged via *.tmp + rename so a crash mid-write never replaces
+// the previous good save with a truncated one.
 app.post('/api/recap', express.json({ limit: '512kb' }), async (req, res) => {
   if (!recapStorageOk) {
     return res.status(503).json({ ok: false, error: 'storage unavailable' });
@@ -132,20 +132,45 @@ app.post('/api/recap', express.json({ limit: '512kb' }), async (req, res) => {
   if (!USER_ID_RE.test(userId)) {
     return res.status(400).json({ ok: false, error: 'invalid userId' });
   }
-  const dir = path.join(RECAP_DIR, room);
-  const file = path.join(dir, `${userId}.json`);
-  const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
-  const record = { savedAt: new Date().toISOString(), state: body };
+
   try {
-    await fs.mkdir(dir, { recursive: true });
-    await fs.writeFile(tmp, JSON.stringify(record, null, 2), 'utf8');
-    await fs.rename(tmp, file);
-    res.json({ ok: true, savedAt: record.savedAt });
+    const savedAt = await withRoomLock(room, async () => {
+      const dir = path.join(RECAP_DIR, room);
+      const file = path.join(dir, 'state.json');
+      await fs.mkdir(dir, { recursive: true });
+
+      let merged;
+      try {
+        const raw = await fs.readFile(file, 'utf8');
+        merged = JSON.parse(raw);
+        if (!merged || typeof merged !== 'object' || !merged.participants) {
+          throw new Error('malformed state.json');
+        }
+      } catch (err) {
+        if (err.code !== 'ENOENT' && !(err instanceof SyntaxError) && err.message !== 'malformed state.json') {
+          throw err;
+        }
+        merged = {
+          roomCode: room,
+          createdAt: new Date().toISOString(),
+          participants: {}
+        };
+      }
+
+      const now = new Date().toISOString();
+      merged.updatedAt = now;
+      merged.participants[userId] = { savedAt: now, state: body };
+
+      const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
+      await fs.writeFile(tmp, JSON.stringify(merged, null, 2), 'utf8');
+      await fs.rename(tmp, file);
+      return now;
+    });
+    res.json({ ok: true, savedAt });
   } catch (err) {
     console.error('[recap] save failed', {
       room, userId, code: err.code, message: err.message
     });
-    fs.unlink(tmp).catch(() => {});
     res.status(500).json({ ok: false, error: 'storage failure' });
   }
 });
