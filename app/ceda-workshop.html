@@ -2535,12 +2535,38 @@ let sessionMode = 'join'; // join | create
 
 function saveState() {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e){}
+  scheduleAutoSave();
 }
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     return raw ? JSON.parse(raw) : null;
   } catch(e){ return null; }
+}
+
+// Tussentijdse auto-save naar /api/recap.
+// Debounce 5s na elke saveState() + heartbeat 60s als verzekering.
+// Stil bij fouten — volgende tick probeert opnieuw.
+let __autoSaveTimer = null;
+let __autoSaveHeartbeat = null;
+function scheduleAutoSave() {
+  if (!state.roomCode || !state.userId) return;
+  clearTimeout(__autoSaveTimer);
+  __autoSaveTimer = setTimeout(flushRecap, 5000);
+}
+async function flushRecap() {
+  if (!state.roomCode || !state.userId) return;
+  try {
+    await fetch('/api/recap', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(state)
+    });
+  } catch {}
+}
+function startAutoSaveHeartbeat() {
+  if (__autoSaveHeartbeat) return;
+  __autoSaveHeartbeat = setInterval(flushRecap, 60000);
 }
 
 /* =========================================================
@@ -3702,6 +3728,7 @@ async function joinSessionRoom(code) {
 
   state.roomCode = code;
   saveState();
+  startAutoSaveHeartbeat();
 
   return new Promise((resolve) => {
     let resolved = false;
