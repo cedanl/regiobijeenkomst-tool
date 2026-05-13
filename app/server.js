@@ -137,6 +137,7 @@ app.post('/api/recap', express.json({ limit: '512kb' }), async (req, res) => {
     const savedAt = await withRoomLock(room, async () => {
       const dir = path.join(RECAP_DIR, room);
       const file = path.join(dir, 'state.json');
+      const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
       await fs.mkdir(dir, { recursive: true });
 
       let merged;
@@ -161,9 +162,13 @@ app.post('/api/recap', express.json({ limit: '512kb' }), async (req, res) => {
       merged.updatedAt = now;
       merged.participants[userId] = { savedAt: now, state: body };
 
-      const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
-      await fs.writeFile(tmp, JSON.stringify(merged, null, 2), 'utf8');
-      await fs.rename(tmp, file);
+      try {
+        await fs.writeFile(tmp, JSON.stringify(merged, null, 2), 'utf8');
+        await fs.rename(tmp, file);
+      } catch (err) {
+        fs.unlink(tmp).catch(() => {}); // best-effort opruimen bij rename-failure
+        throw err;
+      }
       return now;
     });
     res.json({ ok: true, savedAt });
