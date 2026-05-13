@@ -96,6 +96,21 @@ app.get('/api/stats', (req, res) => {
   res.json({ rooms: stats, total: rooms.size });
 });
 
+// Per-room write serialization. Each /api/recap call chains itself behind
+// the previous write for the same room, so read-modify-write on
+// state.json never races. Different rooms run in parallel.
+const roomLocks = new Map(); // roomCode → Promise (most recent write chain)
+
+function withRoomLock(room, fn) {
+  const prev = roomLocks.get(room) || Promise.resolve();
+  const next = prev.catch(() => {}).then(fn);
+  roomLocks.set(room, next);
+  next.finally(() => {
+    if (roomLocks.get(room) === next) roomLocks.delete(room);
+  });
+  return next;
+}
+
 // Opt-in central harvest. Each participant POSTs their own state from the
 // recap stage. Files land in RECAP_DIR/<roomCode>/<userId>.json — re-saves
 // from the same participant overwrite their previous file (latest wins).
