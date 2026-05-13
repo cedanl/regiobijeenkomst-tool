@@ -844,8 +844,14 @@
     letter-spacing: 0.15em; color: var(--np-blauw);
     padding-left: 4px; border-left: 1px solid rgba(0,0,0,0.1);
   }
+  .recap-consent {
+    font-size: 11px; color: rgba(0,0,0,0.55);
+    padding-left: 8px; border-left: 1px solid rgba(0,0,0,0.08);
+    cursor: help; letter-spacing: 0.01em;
+  }
   @media (max-width: 880px) {
-    .participants-cluster .room-pill { display: none; }
+    .participants-cluster .room-pill,
+    .participants-cluster .recap-consent { display: none; }
   }
 
   /* Author chip on insight cards */
@@ -1570,6 +1576,7 @@
         <span class="conn-dot" id="conn-dot"></span>
         <div class="avatars-list" id="topbar-avatars"></div>
         <span class="room-pill" id="topbar-room-code"></span>
+        <span class="recap-consent" title="Sessie-state wordt periodiek samengevoegd op de CEDA-server bewaard voor analyse.">Wordt opgeslagen voor analyse</span>
       </div>
       <div class="timer" id="timer" title="Klik om te pauzeren">
         <i class="fa-solid fa-stopwatch"></i>
