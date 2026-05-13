@@ -57,44 +57,57 @@ URL: https://localhost:8443
 - WebSocket-payload gelimiteerd op 64 KB; ongebruikte rooms worden direct opgeruimd.
 - Server-ping elke 30s — dode connecties worden beëindigd.
 - **Live-verkeer** wordt niet gelogd of opgeslagen — alleen doorgegeven.
-- **Eindoogst** wordt alleen centraal opgeslagen als een deelnemer in de recap-fase
-  expliciet op *Oogst opslaan voor analyse* klikt. Files belanden in `RECAP_DIR`
-  (default lokaal: `./data/recaps`, productie: `/data/recaps`) als
-  `<roomCode>/<userId>.json`. De UI zelf legt deze
-  consent uit in een kader direct boven de knop — de bedoeling is dat
-  deelnemers daar geïnformeerd worden, niet via een aparte facilitator-brief.
+- **Sessie-state** wordt tijdens de bijeenkomst periodiek (debounce 5s + heartbeat 60s)
+  door elke deelnemer naar `POST /api/recap` gestuurd. De server merget per kamer
+  in één bestand `RECAP_DIR/<ROOM>/state.json` (default lokaal `./data/recaps/`,
+  productie `/data/recaps`) onder een per-room mutex. Per deelnemer wordt de
+  laatste state bewaard; nieuwe writes overschrijven die sectie. Het topbar van
+  de app toont een korte regel *"Opslag voor analyse"* zodra een sessie actief is.
 
 ## Centrale oogst voor analyse
 
-Iedere deelnemer ziet aan het einde van de workshop een knop *Oogst opslaan voor analyse*.
-Klikken POST't de eigen JSON-state naar `POST /api/recap` en schrijft die naar disk.
-Per deelnemer wordt één bestand bewaard; herhaald opslaan overschrijft.
+Tijdens de workshop POST't elke deelnemer zijn state periodiek naar
+`/api/recap`. De server houdt per kamer één samengevoegd bestand bij:
 
 Layout op disk:
 ```
 data/recaps/
   <ROOMCODE>/
-    u_xxxxx.json   # ← deelnemer 1, laatste save
-    u_yyyyy.json   # ← deelnemer 2, laatste save
+    state.json   # ← alle deelnemers van deze bijeenkomst, samengevoegd
 ```
+
+`state.json` heeft de vorm:
+
+```json
+{
+  "roomCode": "WS2026",
+  "createdAt": "2026-05-13T10:02:11.000Z",
+  "updatedAt": "2026-05-13T10:47:33.412Z",
+  "participants": {
+    "u_abc123": { "savedAt": "...", "state": { /* deelnemer-state */ } }
+  }
+}
+```
+
+Oude bijeenkomsten kunnen nog `<ROOMCODE>/<userId>.json`-files bevatten
+(legacy per-deelnemer-model van vóór deze wijziging). Die blijven leesbaar
+en downloadbaar via de admin-UI onder *"Legacy per-deelnemer-saves"*.
 
 ### Resultaten bekijken na afloop
 
 Twee manieren, kies wat past:
 
 **Via de browser** — open `/admin/recaps` op de live URL en log in met
-basic-auth. Lijst van alle bijeenkomsten met deelnemers per sessie; klik
-op een bestand om de JSON te downloaden. Vereist dat `ADMIN_PASSWORD`
-als env-var of Fly-secret is gezet — als die ontbreekt staat de hele
-admin-route uit (503).
+basic-auth. Lijst van alle bijeenkomsten met een downloadlink naar het
+samengevoegde `state.json` per kamer (en eventuele legacy files daaronder).
+Vereist dat `ADMIN_PASSWORD` als env-var of Fly-secret is gezet — als die
+ontbreekt staat de hele admin-route uit (503).
 
 ```
 fly secrets set ADMIN_PASSWORD='kies-een-sterk-wachtwoord' -a ceda-regiobijeenkomst
 ```
 
-Default username is `ceda` (overschrijven via `ADMIN_USER`). Het kader
-boven de save-knop in de app maakt geen melding van dit endpoint — het
-is bedoeld voor jullie als facilitators/admins, niet voor deelnemers.
+Default username is `ceda` (overschrijven via `ADMIN_USER`).
 
 **Via CLI / bulk-export** — voor analyse-pipelines of een complete kopie:
 
