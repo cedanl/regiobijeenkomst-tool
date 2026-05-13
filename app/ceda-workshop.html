@@ -1449,20 +1449,6 @@
   .actions-bar .btn-ghost { color: var(--np-wit); border-color: rgba(255,255,255,0.4); }
   .actions-bar .btn-ghost:hover { background: rgba(255,255,255,0.1); }
 
-  .consent-kader {
-    display: flex; gap: var(--space-4); align-items: flex-start;
-    margin-top: var(--space-6);
-    padding: var(--space-4) var(--space-5);
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.18);
-    border-left: 4px solid var(--np-geel);
-    border-radius: 8px;
-    color: rgba(255,255,255,0.92);
-    font-size: 14px; line-height: 1.55;
-  }
-  .consent-kader i.fa-circle-info { color: var(--np-geel); font-size: 18px; margin-top: 2px; }
-  .consent-kader strong { color: var(--np-wit); }
-
   /* Decorative shapes (SVG inline placement helpers) */
   .deco { position: absolute; pointer-events: none; z-index: 0; }
   .stage-content { position: relative; z-index: 1; }
@@ -1861,22 +1847,22 @@
         <div class="privacy-icon-wrap"><i class="fa-solid fa-shield-halved"></i></div>
         <div class="privacy-content">
           <span class="privacy-eyebrow"><i class="fa-solid fa-lock"></i> Privacy</span>
-          <h3>Jullie antwoorden blijven volledig in je eigen browser.</h3>
+          <h3>Jullie sessie wordt voor analyse opgeslagen.</h3>
           <p class="privacy-lede">
-            Live-updates lopen via een WebSocket-relay die alleen berichten doorgeeft aan deelnemers in dezelfde sessiecode — die relay zelf bewaart, logt of slaat niets op. Aan het einde, in de recap, kies je zelf hoe je oogst je apparaat verlaat: <em>Download als JSON</em>, <em>Download als tekst</em>, <em>Print als PDF</em>, of <em>Oogst opslaan voor analyse</em> (die laatste stuurt je oogst expliciet naar de CEDA-server voor latere analyse).
+            Live-updates lopen via een WebSocket-relay die alleen berichten doorgeeft aan deelnemers in dezelfde sessiecode — die relay zelf bewaart, logt of slaat niets op. Tijdens de workshop wordt jullie sessie wel periodiek samengevoegd op de CEDA-server bewaard, zodat we de oogst later kunnen analyseren. Aan het einde kies je zelf hoe je een kopie meeneemt: <em>Download als JSON</em>, <em>Download als tekst</em> of <em>Print als PDF</em>.
           </p>
           <div class="privacy-promises">
             <div class="privacy-promise">
               <i class="fa-solid fa-check"></i>
-              <span><strong>Alleen lokale opslag.</strong> Inzichten, stemmen en use cases staan in jouw browser — nergens centraal.</span>
+              <span><strong>Alleen voor analyse.</strong> Inzichten, stemmen en use cases worden door CEDA samengevoegd; verder geen doorverkoop of marketing.</span>
             </div>
             <div class="privacy-promise">
               <i class="fa-solid fa-check"></i>
-              <span><strong>Geen logs of analytics.</strong> Geen antwoorden, geen contactgegevens, geen gebruiksstatistiek.</span>
+              <span><strong>Geen logs of analytics.</strong> Geen contactgegevens, geen gebruiksstatistiek, geen tracking.</span>
             </div>
             <div class="privacy-promise">
               <i class="fa-solid fa-check"></i>
-              <span><strong>Geen ballast.</strong> Geen authenticatie, geen klantdatabase, geen doorverkoop.</span>
+              <span><strong>Geen ballast.</strong> Geen authenticatie, geen klantdatabase, geen externe trackers.</span>
             </div>
           </div>
         </div>
@@ -2278,18 +2264,10 @@
 
     <div id="recap-cases" class="recap-cases"></div>
 
-    <div class="consent-kader">
-      <i class="fa-solid fa-circle-info"></i>
-      <div>
-        <strong>Oogst opslaan voor analyse</strong> stuurt jouw workshop-resultaten (inzichten, stemmen, use cases) naar de CEDA-server zodat we ze later kunnen samenvoegen en analyseren — vrijwillig, alleen als jij op de knop klikt. Wil je dit niet? Gebruik dan een van de download-opties hieronder; die blijven volledig op je eigen apparaat.
-      </div>
-    </div>
-
     <div class="actions-bar">
       <button class="btn btn-yellow" id="export-json"><i class="fa-solid fa-download"></i> Download als JSON</button>
       <button class="btn btn-green" id="export-text"><i class="fa-solid fa-file-lines"></i> Download als tekst</button>
       <button class="btn btn-ghost" id="print-recap"><i class="fa-solid fa-print"></i> Print / PDF</button>
-      <button class="btn btn-ghost" id="save-recap" title="Opslaan op de CEDA-server zodat CEDA de oogst later kan analyseren"><i class="fa-solid fa-cloud-arrow-up"></i> Oogst opslaan voor analyse</button>
       <button class="btn btn-ghost" id="reset-all" style="margin-left:auto;"><i class="fa-solid fa-trash-can"></i> Workshop resetten</button>
     </div>
   </div>
@@ -3224,43 +3202,6 @@ function renderRecap() {
 document.getElementById('export-json').addEventListener('click', () => {
   const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
   download(blob, `ceda-workshop-${ymd()}.json`);
-});
-document.getElementById('save-recap').addEventListener('click', async (e) => {
-  if (!state.roomCode) {
-    toast('Geen sessie actief — kan niet centraal opslaan.');
-    return;
-  }
-  const btn = e.currentTarget;
-  const original = btn.innerHTML;
-  const restore = () => { btn.innerHTML = original; btn.disabled = false; };
-  btn.disabled = true;
-  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Opslaan…';
-  try {
-    const res = await fetch('/api/recap', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(state)
-    });
-    const data = await res.json().catch(() => ({}));
-    if (res.ok && data.ok) {
-      toast('Oogst opgeslagen voor CEDA-analyse. Bedankt!');
-      btn.innerHTML = '<i class="fa-solid fa-check"></i> Opgeslagen';
-      setTimeout(restore, 4000);
-    } else if (res.status >= 400 && res.status < 500) {
-      // 4xx: validation problem — retrying won't help, ask the user to escalate.
-      toast(`Opslaan geweigerd (${data.error || res.status}). Neem contact op met de facilitator.`);
-      restore();
-    } else {
-      // 5xx or unparseable response — retry is reasonable.
-      toast('Opslaan mislukt — probeer het zo opnieuw.');
-      restore();
-    }
-  } catch (err) {
-    // Network failure (no response). Don't leak browser-specific strings.
-    console.error('[recap] save failed', err);
-    toast('Opslaan mislukt — controleer je verbinding en probeer opnieuw.');
-    restore();
-  }
 });
 document.getElementById('export-text').addEventListener('click', () => {
   let t = `CEDA Regiobijeenkomst — Workshop oogst\nDatum: ${new Date().toLocaleString('nl-NL')}\nSessie: ${state.roomCode || 'solo'}\nDeelnemer: ${state.userName || '-'} (${state.role || '-'})\n\n`;
