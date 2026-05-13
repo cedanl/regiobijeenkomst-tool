@@ -96,11 +96,26 @@ app.get('/api/stats', (req, res) => {
   res.json({ rooms: stats, total: rooms.size });
 });
 
-// Opt-in central harvest. Each participant POSTs their own state from the
-// recap stage. Files land in RECAP_DIR/<roomCode>/<userId>.json — re-saves
-// from the same participant overwrite their previous file (latest wins).
-// Write is staged via a sibling .tmp file + rename so a crash mid-write
-// never replaces the previous good save with a truncated one.
+// Per-room write serialization. Each /api/recap call chains itself behind
+// the previous write for the same room, so read-modify-write on
+// state.json never races. Different rooms run in parallel.
+const roomLocks = new Map(); // roomCode → Promise (most recent write chain)
+
+function withRoomLock(room, fn) {
+  const prev = roomLocks.get(room) || Promise.resolve();
+  const next = prev.catch(() => {}).then(fn);
+  roomLocks.set(room, next);
+  next.finally(() => {
+    if (roomLocks.get(room) === next) roomLocks.delete(room);
+  });
+  return next;
+}
+
+// Periodic central harvest. Each participant POSTs their full state from
+// the workshop (debounced + heartbeat from the client). The server merges
+// per-userId into RECAP_DIR/<room>/state.json under a per-room mutex.
+// Write is staged via *.tmp + rename so a crash mid-write never replaces
+// the previous good save with a truncated one.
 app.post('/api/recap', express.json({ limit: '512kb' }), async (req, res) => {
   if (!recapStorageOk) {
     return res.status(503).json({ ok: false, error: 'storage unavailable' });
@@ -117,20 +132,50 @@ app.post('/api/recap', express.json({ limit: '512kb' }), async (req, res) => {
   if (!USER_ID_RE.test(userId)) {
     return res.status(400).json({ ok: false, error: 'invalid userId' });
   }
-  const dir = path.join(RECAP_DIR, room);
-  const file = path.join(dir, `${userId}.json`);
-  const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
-  const record = { savedAt: new Date().toISOString(), state: body };
+
   try {
-    await fs.mkdir(dir, { recursive: true });
-    await fs.writeFile(tmp, JSON.stringify(record, null, 2), 'utf8');
-    await fs.rename(tmp, file);
-    res.json({ ok: true, savedAt: record.savedAt });
+    const savedAt = await withRoomLock(room, async () => {
+      const dir = path.join(RECAP_DIR, room);
+      const file = path.join(dir, 'state.json');
+      const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
+      await fs.mkdir(dir, { recursive: true });
+
+      let merged;
+      try {
+        const raw = await fs.readFile(file, 'utf8');
+        merged = JSON.parse(raw);
+        if (!merged || typeof merged !== 'object' || !merged.participants) {
+          throw new Error('malformed state.json');
+        }
+      } catch (err) {
+        if (err.code !== 'ENOENT' && !(err instanceof SyntaxError) && err.message !== 'malformed state.json') {
+          throw err;
+        }
+        merged = {
+          roomCode: room,
+          createdAt: new Date().toISOString(),
+          participants: {}
+        };
+      }
+
+      const now = new Date().toISOString();
+      merged.updatedAt = now;
+      merged.participants[userId] = { savedAt: now, state: body };
+
+      try {
+        await fs.writeFile(tmp, JSON.stringify(merged, null, 2), 'utf8');
+        await fs.rename(tmp, file);
+      } catch (err) {
+        fs.unlink(tmp).catch(() => {}); // best-effort opruimen bij rename-failure
+        throw err;
+      }
+      return now;
+    });
+    res.json({ ok: true, savedAt });
   } catch (err) {
     console.error('[recap] save failed', {
       room, userId, code: err.code, message: err.message
     });
-    fs.unlink(tmp).catch(() => {});
     res.status(500).json({ ok: false, error: 'storage failure' });
   }
 });
@@ -161,26 +206,44 @@ function escapeHtml(s) {
 }
 
 app.get('/admin/recaps', requireAdmin, async (req, res) => {
-  let rooms = [];
+  let roomDirs = [];
   try {
-    rooms = (await fs.readdir(RECAP_DIR, { withFileTypes: true }))
+    roomDirs = (await fs.readdir(RECAP_DIR, { withFileTypes: true }))
       .filter(d => d.isDirectory() && ROOM_CODE_RE.test(d.name))
       .map(d => d.name)
       .sort();
   } catch (err) {
     if (err.code !== 'ENOENT') throw err;
   }
+
   const sections = [];
-  for (const room of rooms) {
+  for (const room of roomDirs) {
     const dir = path.join(RECAP_DIR, room);
     let files;
     try {
       files = await fs.readdir(dir);
     } catch { continue; }
-    const jsons = files.filter(f => f.endsWith('.json'));
-    if (!jsons.length) continue;
-    const items = [];
-    for (const f of jsons) {
+
+    // Primair: state.json (merged room file)
+    let primary = null;
+    if (files.includes('state.json')) {
+      const stat = await fs.stat(path.join(dir, 'state.json')).catch(() => null);
+      if (stat) {
+        let updatedAt = null;
+        let participantCount = 0;
+        try {
+          const parsed = JSON.parse(await fs.readFile(path.join(dir, 'state.json'), 'utf8'));
+          updatedAt = parsed.updatedAt;
+          participantCount = Object.keys(parsed.participants || {}).length;
+        } catch {}
+        primary = { size: stat.size, mtime: stat.mtime, updatedAt, participantCount };
+      }
+    }
+
+    // Legacy: oude per-user files (<userId>.json, niet state.json)
+    const legacyFiles = files.filter(f => f.endsWith('.json') && f !== 'state.json');
+    const legacy = [];
+    for (const f of legacyFiles) {
       const stat = await fs.stat(path.join(dir, f)).catch(() => null);
       if (!stat) continue;
       let saved = null;
@@ -190,10 +253,13 @@ app.get('/admin/recaps', requireAdmin, async (req, res) => {
         saved = parsed.savedAt;
         userName = parsed.state?.userName;
       } catch {}
-      items.push({ file: f, size: stat.size, mtime: stat.mtime, saved, userName });
+      legacy.push({ file: f, size: stat.size, mtime: stat.mtime, saved, userName });
     }
-    items.sort((a, b) => (b.mtime > a.mtime ? 1 : -1));
-    sections.push({ room, items });
+    legacy.sort((a, b) => (b.mtime > a.mtime ? 1 : -1));
+
+    if (primary || legacy.length) {
+      sections.push({ room, primary, legacy });
+    }
   }
 
   const html = `<!doctype html>
@@ -206,8 +272,11 @@ app.get('/admin/recaps', requireAdmin, async (req, res) => {
   h1 { font-size: 22px; margin: 0 0 8px; }
   .lede { color: #666; margin: 0 0 32px; }
   .room { border: 1px solid #ddd; border-radius: 8px; padding: 16px 20px; margin-bottom: 16px; background: #fafafa; }
-  .room h2 { margin: 0 0 12px; font-size: 16px; font-family: ui-monospace, SFMono-Regular, Meno, monospace; letter-spacing: 1px; }
+  .room h2 { margin: 0 0 12px; font-size: 16px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 1px; }
   .room .meta { color: #777; font-size: 13px; margin-left: 8px; font-family: -apple-system, sans-serif; letter-spacing: 0; }
+  .primary { padding: 8px 0; border-bottom: 1px solid #eee; margin-bottom: 12px; }
+  .primary a { font-weight: 600; }
+  .legacy-label { color: #888; font-size: 12px; text-transform: uppercase; letter-spacing: .5px; margin: 8px 0 4px; font-weight: 600; }
   table { width: 100%; border-collapse: collapse; }
   th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #eee; font-size: 14px; }
   th { color: #666; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .5px; }
@@ -218,23 +287,30 @@ app.get('/admin/recaps', requireAdmin, async (req, res) => {
 </style>
 </head><body>
 <h1>Recaps · CEDA Regiobijeenkomst</h1>
-<p class="lede">Per bijeenkomst (sessiecode) zie je hieronder welke deelnemers hun oogst centraal hebben opgeslagen. Klik op een bestand om de JSON te downloaden.</p>
+<p class="lede">Per bijeenkomst (sessiecode) één samengevoegd bestand met alle deelnemers. Oudere bijeenkomsten kunnen nog per-deelnemer-bestanden bevatten — die staan onder "legacy".</p>
 ${sections.length === 0
   ? `<p class="empty">Nog geen recaps opgeslagen.</p>`
   : sections.map(s => `
 <section class="room">
-  <h2>${escapeHtml(s.room)} <span class="meta">${s.items.length} deelnemer${s.items.length === 1 ? '' : 's'}</span></h2>
+  <h2>${escapeHtml(s.room)} ${s.primary ? `<span class="meta">${s.primary.participantCount} deelnemer${s.primary.participantCount === 1 ? '' : 's'}</span>` : ''}</h2>
+  ${s.primary ? `
+  <div class="primary">
+    <a href="/admin/recaps/${encodeURIComponent(s.room)}/state.json"><code>state.json</code></a>
+    <span class="meta">bijgewerkt ${escapeHtml(s.primary.updatedAt ? new Date(s.primary.updatedAt).toLocaleString('nl-NL') : '—')} · ${(s.primary.size / 1024).toFixed(1)} KB</span>
+  </div>` : ''}
+  ${s.legacy.length ? `
+  <div class="legacy-label">Legacy per-deelnemer-saves</div>
   <table>
     <thead><tr><th>Deelnemer</th><th>Opgeslagen</th><th>Grootte</th><th>Bestand</th></tr></thead>
     <tbody>
-    ${s.items.map(i => `<tr>
+    ${s.legacy.map(i => `<tr>
       <td>${escapeHtml(i.userName || '—')}</td>
       <td>${escapeHtml(i.saved ? new Date(i.saved).toLocaleString('nl-NL') : '—')}</td>
       <td>${(i.size / 1024).toFixed(1)} KB</td>
       <td><a href="/admin/recaps/${encodeURIComponent(s.room)}/${encodeURIComponent(i.file)}"><code>${escapeHtml(i.file)}</code></a></td>
     </tr>`).join('')}
     </tbody>
-  </table>
+  </table>` : ''}
 </section>`).join('')}
 </body></html>`;
   res.set('Content-Type', 'text/html; charset=utf-8');

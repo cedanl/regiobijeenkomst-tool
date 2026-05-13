@@ -11,9 +11,11 @@ cd app && npm run dev           # node --watch server.js
 caddy run --config docker/Caddyfile   # optional HTTPS frontend on :8443 → proxies to :3000
 ```
 
-No lint, no test, no build step — the frontend ships as-is. Inspect a running server via `GET /healthz` and `GET /api/stats`. Opt-in central harvest at `POST /api/recap` (stores `<RECAP_DIR>/<room>/<userId>.json`; default lokaal `./data/recaps/`, productie `/data/recaps`).
+No lint, no automated tests, no build step — the frontend ships as-is. Verify changes by running the server and exercising the workshop flow in a browser; after path or structure changes a UI smoke-test (host + join from a second tab, sync an op) is the only reliable check. Inspect a running server via `GET /healthz` and `GET /api/stats`. Periodic central harvest at `POST /api/recap`: each client POSTs its own state (debounce 5s + heartbeat 60s); the server merges per `userId` into `<RECAP_DIR>/<room>/state.json` onder een per-room mutex (default lokaal `./data/recaps/`, productie `/data/recaps`). Legacy `<room>/<userId>.json`-files van vóór deze wijziging blijven leesbaar via de admin-UI onder *"Legacy per-deelnemer-saves"*. The recap directory is created on first write — no need to pre-`mkdir`.
 
-Admin browse-UI at `GET /admin/recaps` lists saved recaps with per-file download links. Basic-auth via `ADMIN_USER` (default `ceda`) and `ADMIN_PASSWORD`; if `ADMIN_PASSWORD` is unset the route refuses every request rather than running open.
+Admin browse-UI at `GET /admin/recaps` lists saved recaps with per-file download links. Basic-auth via `ADMIN_USER` (default `ceda`) and `ADMIN_PASSWORD`; if `ADMIN_PASSWORD` is unset the route returns 503 for every request rather than running open.
+
+`INSTRUCTIONS.md` is the human-readable quickstart (folder layout, local run, Fly deploy). `docs/sessions/<YYYY-MM-DD-topic>.md` is the running session log — read the latest before starting substantive work, and add a new entry for non-trivial changes.
 
 Production deploy: `docker/Dockerfile` + `fly.toml` (root) target Fly.io regio `ams` with a `recaps` volume mounted at `/data`. Build vanaf repo-root: `docker build -f docker/Dockerfile .`; deploy: `fly deploy`. `fly.toml` moet in build-context root staan — Fly resolveert `dockerfile` relatief aan zijn eigen locatie.
 
