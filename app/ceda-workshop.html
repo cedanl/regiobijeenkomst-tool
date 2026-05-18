@@ -844,15 +844,6 @@
     letter-spacing: 0.15em; color: var(--np-blauw);
     padding-left: 4px; border-left: 1px solid rgba(0,0,0,0.1);
   }
-  .recap-consent {
-    font-size: 11px; color: rgba(0,0,0,0.55);
-    padding-left: 8px; border-left: 1px solid rgba(0,0,0,0.08);
-    cursor: help; letter-spacing: 0.01em;
-    white-space: nowrap;
-  }
-  @media (max-width: 1100px) {
-    .participants-cluster .recap-consent { display: none; }
-  }
   @media (max-width: 880px) {
     .participants-cluster .room-pill { display: none; }
   }
@@ -1579,11 +1570,6 @@
         <span class="conn-dot" id="conn-dot"></span>
         <div class="avatars-list" id="topbar-avatars"></div>
         <span class="room-pill" id="topbar-room-code"></span>
-        <span class="recap-consent" title="Sessie-state wordt periodiek samengevoegd op de CEDA-server bewaard voor analyse."><i class="fa-solid fa-cloud-arrow-up"></i> Opslag voor analyse</span>
-      </div>
-      <div class="timer" id="timer" title="Klik om te pauzeren">
-        <i class="fa-solid fa-stopwatch"></i>
-        <span id="timer-display">02:00:00</span>
       </div>
     </div>
   </div>
@@ -1630,34 +1616,12 @@
     </div>
 
     <div class="container hero-content">
-      <span class="eyebrow"><i class="fa-solid fa-bolt"></i> Workshop · 2 uur · co-creatie</span>
+      <span class="eyebrow"><i class="fa-solid fa-bolt"></i> Workshop 1,5 uur</span>
       <h1>Sneller van data naar <em>betrouwbare inzichten</em>.</h1>
       <p class="hero-lead">
         Welkom bij de CEDA-regiobijeenkomst voor het hbo en wo. Vandaag werken we samen aan kansen, prioriteiten en concrete use cases —
         zodat onderwijsinstellingen kunnen inspelen op een steeds sneller veranderende wereld.
       </p>
-      <div class="hero-cta">
-        <button class="btn btn-primary" id="cta-start"><i class="fa-solid fa-play"></i> Start de workshop</button>
-        <button class="btn btn-ghost" id="cta-scroll"><i class="fa-solid fa-arrow-down"></i> Eerst doorlezen</button>
-      </div>
-
-      <div class="hero-meta">
-        <div class="meta-card">
-          <div class="meta-icon"><i class="fa-solid fa-users"></i></div>
-          <span class="label">Voor wie</span>
-          <strong>Onderwijspraktijk, aansturing & ondersteuning</strong>
-        </div>
-        <div class="meta-card">
-          <div class="meta-icon"><i class="fa-solid fa-clock"></i></div>
-          <span class="label">Duur</span>
-          <strong>2 uur · 4 fasen</strong>
-        </div>
-        <div class="meta-card">
-          <div class="meta-icon"><i class="fa-solid fa-handshake"></i></div>
-          <span class="label">Werkwijze</span>
-          <strong>Co-creatie & dot-voting</strong>
-        </div>
-      </div>
     </div>
 
     <a href="#howitworks" class="scroll-indicator"><i class="fa-solid fa-chevron-down"></i></a>
@@ -1682,9 +1646,9 @@
     <div class="container">
       <div class="howit-intro">
         <span class="section-eyebrow"><i class="fa-solid fa-route"></i> Hoe werkt het?</span>
-        <h2>In <em>twee uur</em> samen van losse signalen<br>naar gedeelde use cases.</h2>
+        <h2>In <em>1,5 uur</em> samen van signalen<br>naar gedeelde use cases.</h2>
         <p class="lead-large">
-          We werken in vier korte fases. Iedereen draagt bij, iedereen stemt mee, en iedereen ziet elkaars input live verschijnen — zelfs als je op een andere laptop zit. Aan het einde heb je een concrete oogst om mee terug te nemen naar je instelling.
+          We werken in vier korte fases. Iedereen draagt bij, iedereen stemt mee, en iedereen ziet elkaars input live verschijnen — zelfs als je op een andere laptop zit. Aan het einde hebben we een concrete oogst om in co-creatie mee aan de slag te gaan.
         </p>
       </div>
 
@@ -1692,15 +1656,15 @@
         <!-- Step 1 — Verkennen -->
         <div class="howit-step" data-tone="green">
           <div class="howit-text">
-            <span class="step-num"><span class="step-digit">01</span> · 30 min</span>
+            <span class="step-num"><span class="step-digit">01</span> · 25 min</span>
             <h3>Verkennen.</h3>
             <p class="step-desc">
-              Welke kansen zie jij vanuit jouw rol? Welke uitdagingen ervaar je in de praktijk? Schrijf concrete kaarten en lees met elkaar mee.
+              Welke kansen zie jij vanuit jouw rol? Welke uitdagingen ervaar je in de praktijk? Noteer deze voorbeelden en lees met elkaar mee.
             </p>
             <ul class="step-features">
-              <li><i class="fa-solid fa-check"></i> Per rol gekleurde inspiratie uit échte praktijkpersona's</li>
-              <li><i class="fa-solid fa-check"></i> Klik een suggestie of typ je eigen verhaal</li>
-              <li><i class="fa-solid fa-check"></i> Iedereen ziet elkaars kaarten direct verschijnen</li>
+              <li><i class="fa-solid fa-check"></i> Kies jouw rol (onderwijspraktijk, aansturing of ondersteunende dienst) op basis van gekleurde persona's uit de praktijk</li>
+              <li><i class="fa-solid fa-check"></i> Klik op de suggesties of voeg je eigen uitdagingen en kansen toe</li>
+              <li><i class="fa-solid fa-check"></i> Iedereen ziet elkaars input direct verschijnen</li>
             </ul>
           </div>
           <div class="howit-visual">
@@ -1723,15 +1687,15 @@
         <!-- Step 2 — Prioriteren -->
         <div class="howit-step reverse" data-tone="blue">
           <div class="howit-text">
-            <span class="step-num"><span class="step-digit">02</span> · 30 min</span>
+            <span class="step-num"><span class="step-digit">02</span> · 20 min</span>
             <h3>Prioriteren.</h3>
             <p class="step-desc">
-              Iedereen krijgt 5 stemmen. Verdeel ze over de inzichten die jij het meest urgent of waardevol vindt — stapelen op één kaart mag.
+              Ieder team krijgt 5 stemmen. Verdeel ze over de inzichten die jij het meest urgent of waardevol vindt — meerdere stemmen op één inzicht mag.
             </p>
             <ul class="step-features">
-              <li><i class="fa-solid fa-check"></i> Eigen budget per persoon, totaal in één oogopslag</li>
-              <li><i class="fa-solid fa-check"></i> Mini-avatars laten zien wie er heeft gestemd</li>
-              <li><i class="fa-solid fa-check"></i> De top stijgt automatisch naar boven</li>
+              <li><i class="fa-solid fa-check"></i> Alle stemmen in één totaaloverzicht</li>
+              <li><i class="fa-solid fa-check"></i> Mini-avatars laten zien wie op welk inzicht heeft gestemd</li>
+              <li><i class="fa-solid fa-check"></i> De prioriteiten komen automatisch bovenaan te staan</li>
             </ul>
           </div>
           <div class="howit-visual">
@@ -1764,15 +1728,15 @@
         <!-- Step 3 — Use cases -->
         <div class="howit-step" data-tone="orange">
           <div class="howit-text">
-            <span class="step-num"><span class="step-digit">03</span> · 45 min</span>
+            <span class="step-num"><span class="step-digit">03</span> · 35 min</span>
             <h3>Use cases.</h3>
             <p class="step-desc">
               Vertaal de top-3 inzichten naar concrete use cases. Vier velden — Doel, Actoren, Resultaat en AI &amp; data — geven structuur. Focus op het <em>wat</em>, niet op het <em>hoe</em>.
             </p>
             <ul class="step-features">
-              <li><i class="fa-solid fa-check"></i> Voorbeeld helpt je het patroon herkennen</li>
-              <li><i class="fa-solid fa-check"></i> Live samen typen aan hetzelfde canvas</li>
-              <li><i class="fa-solid fa-check"></i> Kies extra inzichten als je tijd over hebt</li>
+              <li><i class="fa-solid fa-check"></i> gezamenlijk het canvas invullen</li>
+              <li><i class="fa-solid fa-check"></i> Live samen werken aan hetzelfde canvas</li>
+              <li><i class="fa-solid fa-check"></i> Kies extra inzichten om uit te werken als je tijd over hebt</li>
             </ul>
           </div>
           <div class="howit-visual">
@@ -1808,15 +1772,15 @@
         <!-- Step 4 — Recap -->
         <div class="howit-step reverse" data-tone="dark">
           <div class="howit-text">
-            <span class="step-num"><span class="step-digit">04</span> · 15 min</span>
-            <h3>Recap &amp; oogst.</h3>
+            <span class="step-num"><span class="step-digit">04</span> · 10 min</span>
+            <h3>Recap.</h3>
             <p class="step-desc">
-              Je sluit af met een overzicht van alle inzichten en uitgewerkte use cases. Download als JSON, tekstbestand of print als PDF om mee te nemen naar je team.
+              We sluiten af met een overzicht van alle inzichten en uitgewerkte use cases.
             </p>
             <ul class="step-features">
-              <li><i class="fa-solid fa-check"></i> Statkaarten met inzichten, stemmen en use cases</li>
-              <li><i class="fa-solid fa-check"></i> Volledige oogst per deelnemer en per case</li>
-              <li><i class="fa-solid fa-check"></i> Direct deelbaar met je achterban</li>
+              <li><i class="fa-solid fa-check"></i> Statistieken van de inzichten, stemmen en use cases</li>
+              <li><i class="fa-solid fa-check"></i> Volledig overzicht per deelnemer en per case</li>
+              <li><i class="fa-solid fa-check"></i> Direct deelbaar</li>
             </ul>
           </div>
           <div class="howit-visual">
@@ -1845,42 +1809,6 @@
         </div>
       </div>
 
-      <!-- PRIVACY CALLOUT -->
-      <div class="privacy-card">
-        <div class="privacy-card-deco">
-          <svg viewBox="0 0 200 200">
-            <circle cx="100" cy="100" r="30"/>
-            <circle cx="100" cy="100" r="55"/>
-            <circle cx="100" cy="100" r="80"/>
-          </svg>
-        </div>
-        <div class="privacy-icon-wrap"><i class="fa-solid fa-shield-halved"></i></div>
-        <div class="privacy-content">
-          <span class="privacy-eyebrow"><i class="fa-solid fa-lock"></i> Privacy</span>
-          <h3>Jullie sessie wordt voor analyse opgeslagen.</h3>
-          <p class="privacy-lede">
-            Live-updates lopen via een WebSocket-relay die alleen berichten doorgeeft aan deelnemers in dezelfde sessiecode — die relay zelf bewaart, logt of slaat niets op. Tijdens de workshop wordt jullie sessie wel periodiek samengevoegd op de CEDA-server bewaard, zodat we de oogst later kunnen analyseren. Aan het einde kies je zelf hoe je een kopie meeneemt: <em>Download als JSON</em>, <em>Download als tekst</em> of <em>Print als PDF</em>.
-          </p>
-          <div class="privacy-promises">
-            <div class="privacy-promise">
-              <i class="fa-solid fa-check"></i>
-              <span><strong>Alleen voor analyse.</strong> Inzichten, stemmen en use cases worden door CEDA samengevoegd; verder geen doorverkoop of marketing.</span>
-            </div>
-            <div class="privacy-promise">
-              <i class="fa-solid fa-check"></i>
-              <span><strong>Geen logs of analytics.</strong> Geen contactgegevens, geen gebruiksstatistiek, geen tracking.</span>
-            </div>
-            <div class="privacy-promise">
-              <i class="fa-solid fa-check"></i>
-              <span><strong>Geen ballast.</strong> Geen authenticatie, geen klantdatabase, geen externe trackers.</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div style="display:flex; justify-content:center; margin-top: var(--space-8); position: relative; z-index: 1;">
-        <a href="#join-session" class="btn btn-primary"><i class="fa-solid fa-arrow-right"></i> Aanmelden bij sessie</a>
-      </div>
     </div>
   </section>
 
@@ -1893,14 +1821,14 @@
       </svg>
     </div>
     <div class="container">
-      <span class="section-eyebrow"><i class="fa-solid fa-user-plus"></i> Stap 1 — Aanmelden bij sessie</span>
+      <span class="section-eyebrow"><i class="fa-solid fa-user-plus"></i> Stap 1 — Sessie</span>
       <h2>Doe samen mee aan de workshop</h2>
-      <p class="lead">Vul je naam in en sluit aan met een sessiecode, óf start een nieuwe. Iedereen met dezelfde code werkt live in dezelfde workshop — kaarten en stemmen verschijnen direct bij elkaar in beeld.</p>
+      <p class="lead">Vul jullie groepsnaam in en sluit aan met een sessiecode. Iedereen met dezelfde code werkt live in dezelfde workshop — jullie input verschijnt direct bij elkaar in beeld.</p>
 
       <div class="session-card">
         <div class="field">
-          <span class="field-label">Je naam</span>
-          <input type="text" id="user-name" placeholder="bv. Anouk" autocomplete="given-name" maxlength="40">
+          <span class="field-label">Jullie teamnaam</span>
+          <input type="text" id="user-name" placeholder="bv. Team Anouk" autocomplete="off" maxlength="40">
         </div>
 
         <div class="session-mode" role="tablist" aria-label="Sessiemodus">
@@ -1937,9 +1865,9 @@
   <div class="role-section" id="choose-role">
     <div class="container">
       <span class="section-eyebrow"><i class="fa-solid fa-id-badge"></i> Stap 2 — Kies je rol</span>
-      <h2>Welke bril zet jij vandaag op?</h2>
+      <h2>Welke bril zetten jullie vandaag op?</h2>
       <p class="lead" style="font-size:18px; color:#444; margin-top:8px; max-width: 720px;">
-        Je inzichten en stem worden gekoppeld aan de rol die je kiest. Zo kunnen we straks zien hoe perspectieven tussen praktijk, aansturing en ondersteuning verschillen.
+        Jullie inzichten worden gekoppeld aan de rol die je kiest. Zo kunnen we straks zien hoe perspectieven tussen praktijk, aansturing en ondersteuning verschillen.
       </p>
 
       <div class="role-grid">
@@ -1961,9 +1889,9 @@
           <h3>Aansturing</h3>
           <p>Bestuurder, opleidingsdirecteur, beleidsmedewerker — verantwoordelijk voor koers, keuzes en beleid.</p>
           <ul class="role-bullets">
-            <li><i class="fa-solid fa-chart-pie"></i> Sturen op actuele managementinformatie i.p.v. jaarrapportages</li>
+            <li><i class="fa-solid fa-chart-pie"></i> Sturen op actuele managementinformatie</li>
             <li><i class="fa-solid fa-diagram-project"></i> Probleemvakken en curriculumkeuzes onderbouwen met data</li>
-            <li><i class="fa-solid fa-clipboard-check"></i> Effecten van beleidsmaatregelen evalueren in plaats van aannemen</li>
+            <li><i class="fa-solid fa-clipboard-check"></i> Effecten van beleidsmaatregelen evalueren</li>
           </ul>
           <span class="role-source">Geïnspireerd op persona's Sandra (bestuurder), Steven (opleidings­directeur) &amp; Safae (beleids­medewerker) — doe-meer-met-studiedata.nl</span>
         </button>
@@ -1982,27 +1910,27 @@
       </div>
 
       <div class="agenda">
-        <h3>Hoe ziet de komende 2 uur eruit?</h3>
+        <h3>Hoe ziet de komende 1,5 uur eruit?</h3>
         <div class="agenda-list">
           <div class="agenda-item">
             <div class="num">1</div>
             <h4>Verkennen</h4>
-            <span>30 min · kansen & uitdagingen</span>
+            <span>25 min · kansen & uitdagingen</span>
           </div>
           <div class="agenda-item">
             <div class="num">2</div>
             <h4>Prioriteren</h4>
-            <span>30 min · dot-voting</span>
+            <span>20 min · dot-voting</span>
           </div>
           <div class="agenda-item">
             <div class="num">3</div>
             <h4>Use cases</h4>
-            <span>45 min · canvas-werk</span>
+            <span>35 min · canvas-werk</span>
           </div>
           <div class="agenda-item">
             <div class="num">4</div>
             <h4>Recap</h4>
-            <span>15 min · oogst & vervolg</span>
+            <span>10 min · oogst & vervolg</span>
           </div>
         </div>
       </div>
@@ -2021,7 +1949,7 @@
       <span class="stage-eyebrow"><i class="fa-solid fa-binoculars"></i> Fase 1 · Verkennen</span>
       <h2>Wat gebeurt er in jouw praktijk?</h2>
       <p class="lead">
-        Schrijf concrete kansen op die je ziet, en de uitdagingen waar je tegenaan loopt. Wees specifiek — een goed voorbeeld is goud waard. Voeg per kaart toe vanuit welke rol je kijkt.
+        Schrijf concrete kansen op die je ziet, en de uitdagingen waar je tegenaan loopt. Wees specifiek — een goed voorbeeld is goud waard. Zie je een kans of uitdaging vanuit een ander perspectief? Wissel dan van rol.
       </p>
     </div>
 
@@ -2039,8 +1967,8 @@
           <div class="inspire-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
           <div>
             <span class="label">Inspiratie</span>
-            <h3>Niet-zo-blanco vellen — gebaseerd op échte praktijkpersona's</h3>
-            <p>Klik een suggestie om hem direct als kaart aan de juiste kolom toe te voegen. Daarna kun je hem aanvullen met je eigen kaarten hierboven.</p>
+            <h3>Gebaseerd op échte persona's uit het Versnellingsplan</h3>
+            <p>Klik een suggestie om hem direct als kans of uitdaging toe te voegen.</p>
           </div>
         </div>
         <div class="inspire-tabs" id="inspire-tabs"></div>
@@ -2137,9 +2065,9 @@
   <div class="container">
     <div class="stage-header">
       <span class="stage-eyebrow"><i class="fa-solid fa-circle-dot"></i> Fase 2 · Prioriteren</span>
-      <h2>Waar liggen de grootste kansen?</h2>
+      <h2>Wat zijn de belangrijkste inzichten?</h2>
       <p class="lead">
-        Je hebt <strong>5 stemmen</strong> te vergeven. Verdeel ze over de inzichten die jij het meest waardevol of urgent vindt — je mag meerdere stemmen op één kaart plaatsen.
+        Jullie hebben <strong>5 stemmen</strong> te vergeven. Verdeel ze met elkaar over de kansen of uitdagingen die jullie het grootst of het meest urgent vinden. Jullie mogen meerdere stemmen op één kaart plaatsen.
       </p>
     </div>
 
@@ -2160,8 +2088,8 @@
 
     <div class="stage-footer">
       <div class="next-info">
-        <strong>De top wint plek op het canvas.</strong>
-        De meest gestemde inzichten gaan automatisch door naar fase 3.
+        <strong>De top 3 zetten we om naar een Use case.</strong>
+        De inzichten met de meeste stemmen gaan automatisch door naar fase 3.
       </div>
       <button class="btn btn-primary" data-go-stage="cases"><i class="fa-solid fa-arrow-right"></i> Naar fase 3: Use cases</button>
     </div>
@@ -2190,7 +2118,7 @@
       </div>
       <div class="usecase-intro-head">
         <div class="intro-icon"><i class="fa-solid fa-circle-info"></i></div>
-        <h3>Wat verstaan we onder use cases?</h3>
+        <h3>Wat is een use case?</h3>
       </div>
       <p class="lede">
         Een use case beschrijft hoe een persoon een systeem gebruikt om een specifiek doel te bereiken — inclusief de stappen, alternatieve scenario's en de voorwaarden. Het focust op het <strong>"wat"</strong> (het doel) in plaats van het <strong>"hoe"</strong> (de technische implementatie).
@@ -2219,16 +2147,12 @@
         </div>
       </div>
 
-      <div class="usecase-example">
-        <span class="example-label"><i class="fa-solid fa-lightbulb"></i> Voorbeeld</span>
-        <p>De <span class="example-mark" data-kind="actor" data-label="actor">studieloopbaan­begeleider</span> ontvangt met behulp van de uitnodigings­regel een <span class="example-mark" data-kind="doel" data-label="doel">signaal welke studenten risico lopen op uitval</span>, zodat hij of zij deze studenten <span class="example-mark" data-kind="resultaat" data-label="resultaat">tijdig kan uitnodigen voor een gesprek en passende ondersteuning kan bieden</span>.</p>
-      </div>
     </div>
 
     <div class="case-pick">
       <h3 style="display:flex; align-items:center; gap:10px;"><i class="fa-solid fa-arrows-up-to-line" style="color: var(--np-oranje);"></i> Kies welke inzichten je uitwerkt</h3>
       <p style="margin: 8px 0 var(--space-4); color:#444; font-size:14px;">
-        De top 3 op basis van stemmen staan al aan. Je kunt extra inzichten aanzetten of er een uitzetten.
+        De top 3 op basis van stemmen staan al aan. Je kunt extra inzichten aanzetten of uitzetten.
       </p>
       <div class="pick-grid" id="pick-grid"></div>
     </div>
@@ -2249,9 +2173,9 @@
 <section id="stage-recap" class="stage">
   <div class="container">
     <div class="stage-header">
-      <span class="stage-eyebrow"><i class="fa-solid fa-flag-checkered"></i> Recap · oogst & vervolg</span>
+      <span class="stage-eyebrow"><i class="fa-solid fa-flag-checkered"></i> Recap</span>
       <h2>Dit is jullie oogst van vandaag</h2>
-      <p class="lead">Een overzicht van inzichten, prioriteiten en uitgewerkte use cases. Download als bestand of print als PDF om mee te nemen.</p>
+      <p class="lead">Een overzicht van inzichten, prioriteiten en uitgewerkte use cases.</p>
     </div>
 
     <div class="recap-grid">
@@ -2461,7 +2385,7 @@ let activePersona = 'docent';
    ========================================================= */
 const STORAGE_KEY = 'ceda-workshop-v2';
 const USER_KEY = 'ceda-workshop-user';
-const TOTAL_TIME_S = 2 * 60 * 60;
+const TOTAL_TIME_S = 90 * 60; // 1,5 uur
 const DEFAULT_VOTES = 5;
 const TOP_PICK = 3;
 const APP_ID = 'ceda-regiobijeenkomst-2026';
@@ -2523,38 +2447,12 @@ let sessionMode = 'join'; // join | create
 
 function saveState() {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e){}
-  scheduleAutoSave();
 }
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     return raw ? JSON.parse(raw) : null;
   } catch(e){ return null; }
-}
-
-// Tussentijdse auto-save naar /api/recap.
-// Debounce 5s na elke saveState() + heartbeat 60s als verzekering.
-// Stil bij fouten — volgende tick probeert opnieuw.
-let __autoSaveTimer = null;
-let __autoSaveHeartbeat = null;
-function scheduleAutoSave() {
-  if (!state.roomCode || !state.userId) return;
-  clearTimeout(__autoSaveTimer);
-  __autoSaveTimer = setTimeout(flushRecap, 5000);
-}
-async function flushRecap() {
-  if (!state.roomCode || !state.userId) return;
-  try {
-    await fetch('/api/recap', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(state)
-    });
-  } catch {}
-}
-function startAutoSaveHeartbeat() {
-  if (__autoSaveHeartbeat) return;
-  __autoSaveHeartbeat = setInterval(flushRecap, 60000);
 }
 
 /* =========================================================
@@ -2572,7 +2470,7 @@ function goTo(stage) {
   } else {
     tb.style.display = 'block';
     updatePills();
-    if (!state.timer.running && state.timer.remaining > 0) startTimer();
+    // timer auto-start uitgeschakeld — UI-element verwijderd
   }
   if (stage === 'explore') renderExplore();
   if (stage === 'prioritize') renderPrioritize();
@@ -2610,7 +2508,8 @@ function fmtTime(s) {
   return `${h}:${m}:${sec}`;
 }
 function renderTimer() {
-  document.getElementById('timer-display').textContent = fmtTime(state.timer.remaining);
+  const el = document.getElementById('timer-display');
+  if (el) el.textContent = fmtTime(state.timer.remaining);
 }
 function startTimer() {
   if (timerInterval) clearInterval(timerInterval);
@@ -2628,10 +2527,7 @@ function stopTimer() {
   state.timer.running = false;
   saveState();
 }
-document.getElementById('timer').addEventListener('click', () => {
-  if (state.timer.running) { stopTimer(); toast('Timer gepauzeerd'); }
-  else { startTimer(); toast('Timer hervat'); }
-});
+// Timer verwijderd uit UI op verzoek — timer-state blijft in code maar wordt niet meer gestart.
 
 /* =========================================================
    WELCOME — session join + role selection
@@ -2699,13 +2595,7 @@ document.getElementById('leave-room').addEventListener('click', () => {
   toast('Sessie verlaten');
 });
 
-document.getElementById('cta-start').addEventListener('click', () => {
-  document.getElementById('join-session').scrollIntoView({ behavior: 'smooth' });
-  setTimeout(() => document.getElementById('user-name').focus(), 600);
-});
-document.getElementById('cta-scroll').addEventListener('click', () => {
-  document.getElementById('howitworks').scrollIntoView({ behavior: 'smooth' });
-});
+// (Hero CTA's verwijderd op verzoek — scroll-indicator-chevron in hero blijft over)
 
 document.querySelectorAll('.role-card').forEach(card => {
   card.addEventListener('click', () => {
@@ -3032,7 +2922,7 @@ document.getElementById('reset-votes').addEventListener('click', () => {
    ========================================================= */
 const CASE_FIELDS = [
   { key: 'doel',      label: 'Doel',       icon: 'fa-bullseye',       tone: 'blue',   prompt: 'Wat wil je bereiken met deze use case? Beschrijf het concrete doel in één zin.' },
-  { key: 'actoren',   label: 'Actoren',    icon: 'fa-users',          tone: 'pink',   prompt: 'Voor wie is deze use case belangrijk? Wie zijn er betrokken (rollen, niet personen)?' },
+  { key: 'actoren',   label: 'Actoren',    icon: 'fa-users',          tone: 'pink',   prompt: 'Voor wie is deze use case belangrijk? Wie zijn er betrokken (rollen, geen namen)?' },
   { key: 'resultaat', label: 'Resultaat',  icon: 'fa-flag-checkered', tone: 'green',  prompt: 'Wat is de bijdrage aan het onderwijs, de onderwijsondersteuning of de studentbegeleiding?' },
   { key: 'ai_data',   label: 'AI & data',  icon: 'fa-microchip',      tone: 'orange', prompt: 'Welke rol spelen AI en data hierin? Welke data is nodig, en hoe wordt die ingezet?' }
 ];
@@ -3679,7 +3569,6 @@ async function joinSessionRoom(code) {
 
   state.roomCode = code;
   saveState();
-  startAutoSaveHeartbeat();
 
   return new Promise((resolve) => {
     let resolved = false;
