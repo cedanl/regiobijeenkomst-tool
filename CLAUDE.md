@@ -2,6 +2,71 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
+
+**Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
+
+## 1. Think Before Coding
+
+**Don't assume. Don't hide confusion. Surface tradeoffs.**
+
+Before implementing:
+- State your assumptions explicitly. If uncertain, ask.
+- If multiple interpretations exist, present them - don't pick silently.
+- If a simpler approach exists, say so. Push back when warranted.
+- If something is unclear, stop. Name what's confusing. Ask.
+
+## 2. Simplicity First
+
+**Minimum code that solves the problem. Nothing speculative.**
+
+- No features beyond what was asked.
+- No abstractions for single-use code.
+- No "flexibility" or "configurability" that wasn't requested.
+- No error handling for impossible scenarios.
+- If you write 200 lines and it could be 50, rewrite it.
+
+Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
+
+## 3. Surgical Changes
+
+**Touch only what you must. Clean up only your own mess.**
+
+When editing existing code:
+- Don't "improve" adjacent code, comments, or formatting.
+- Don't refactor things that aren't broken.
+- Match existing style, even if you'd do it differently.
+- If you notice unrelated dead code, mention it - don't delete it.
+
+When your changes create orphans:
+- Remove imports/variables/functions that YOUR changes made unused.
+- Don't remove pre-existing dead code unless asked.
+
+The test: Every changed line should trace directly to the user's request.
+
+## 4. Goal-Driven Execution
+
+**Define success criteria. Loop until verified.**
+
+Transform tasks into verifiable goals:
+- "Add validation" → "Write tests for invalid inputs, then make them pass"
+- "Fix the bug" → "Write a test that reproduces it, then make it pass"
+- "Refactor X" → "Ensure tests pass before and after"
+
+For multi-step tasks, state a brief plan:
+```
+1. [Step] → verify: [check]
+2. [Step] → verify: [check]
+3. [Step] → verify: [check]
+```
+
+Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
+
+---
+
+**These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
+
+
 ## Commands
 
 ```
@@ -10,6 +75,15 @@ cd app && npm start             # node server.js  (PORT=3000, HOST=0.0.0.0)
 cd app && npm run dev           # node --watch server.js
 caddy run --config docker/Caddyfile   # optional HTTPS frontend on :8443 → proxies to :3000
 ```
+
+### Environment variables
+
+| Env var | Default | Effect |
+|---|---|---|
+| `PORT` / `HOST` | `3000` / `0.0.0.0` | server bind |
+| `RECAP_DIR` | `./data/recaps` (prod: `/data/recaps`) | recap storage root |
+| `ADMIN_USER` | `ceda` | basic-auth user for `/admin/recaps` |
+| `ADMIN_PASSWORD` | unset → admin route returns 503 | basic-auth password (required to enable admin UI) |
 
 No lint, no automated tests, no build step — the frontend ships as-is. Verify changes by running the server and exercising the workshop flow in a browser; after path or structure changes a UI smoke-test (host + join from a second tab, sync an op) is the only reliable check. Inspect a running server via `GET /healthz` and `GET /api/stats`. Periodic central harvest at `POST /api/recap`: each client POSTs its own state (debounce 5s + heartbeat 60s); the server merges per `userId` into `<RECAP_DIR>/<room>/state.json` onder een per-room mutex (default lokaal `./data/recaps/`, productie `/data/recaps`). Legacy `<room>/<userId>.json`-files van vóór deze wijziging blijven leesbaar via de admin-UI onder *"Legacy per-deelnemer-saves"*. The recap directory is created on first write — no need to pre-`mkdir`.
 
@@ -25,7 +99,7 @@ A **two-file app** in `app/`: `server.js` + `ceda-workshop.html`. No framework, 
 
 Repo-layout:
 - `app/` — applicatiecode (server + frontend + npm-manifest + macOS launcher)
-- `docker/` — Dockerfile, entrypoint, fly.toml, Caddyfile
+- `docker/` — Dockerfile, entrypoint, Caddyfile (note: `fly.toml` lives in repo-root, not here)
 - `docs/` — documentatie en sessieverslagen
 - `data/` — lokale recap-opslag (gitignored)
 
@@ -34,6 +108,15 @@ Repo-layout:
 - WebSocket at `/ws?room=<CODE>` is a **pure relay**: it never inspects, persists, or logs payloads. All "server state" is `rooms: Map<roomCode, Set<WebSocket>>` in memory — a room is created on first join, deleted when empty.
 - Validation is intentionally minimal: room code `[A-Z0-9]{3,16}`, payload ≤ 64 KB, binary frames dropped. Heartbeat ping every 30s terminates dead peers.
 - The relay forwards each message to every *other* peer in the room — the sender never gets an echo, so it must apply its own op locally before broadcasting.
+
+Endpoints:
+- `GET /` → workshop app (`ceda-workshop.html`)
+- `GET /healthz` → `{ ok: true, rooms: N }`
+- `GET /api/stats` → room + peer counts (no content)
+- `POST /api/recap` → merge participant state into `<RECAP_DIR>/<room>/state.json`
+- `GET /admin/recaps` → admin browse UI (basic-auth; 503 if `ADMIN_PASSWORD` unset)
+- `GET /admin/recaps/:room/:file` → JSON download per recap file
+- `WS /ws?room=<CODE>` → relay (broadcast to other peers in the same room)
 
 ### `ceda-workshop.html` — single-file frontend (~3900 lines)
 - All UI, state, persistence (localStorage), and sync logic live in one embedded `<script>`.
