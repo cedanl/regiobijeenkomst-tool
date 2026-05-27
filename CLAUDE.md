@@ -73,6 +73,8 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 cd app && npm install
 cd app && npm start             # node server.js  (PORT=3000, HOST=0.0.0.0)
 cd app && npm run dev           # node --watch server.js
+cd app && npm test              # playwright test — recap-regressie (eerste keer: npx playwright install chromium)
+cd app && npx playwright test tests/recap.spec.mjs --grep "naam"   # één test draaien
 caddy run --config docker/Caddyfile   # optional HTTPS frontend on :8443 → proxies to :3000
 ```
 
