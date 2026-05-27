@@ -76,13 +76,104 @@ in dezelfde `state.json` onder hun eigen `userId`. Verloren tabs: weg.
 - Bevat ook eerdere doc-edits in `CLAUDE.md` (line-count drift, README- en
   superpowers-pointers) en `INSTRUCTIONS.md` (recap-layout naar `state.json`).
 
-## Open
-- **Regressie-vangnet ontbreekt nog.** Dezelfde frontend-swap-categorie kan
-  dit zo weer slopen. Minimale CI/preflight: een Playwright-stap die een room
-  joint, één state-change maakt en `state.json` op disk verifieert. Hangt
-  voor nu af van handmatige UI-smoke-tests bij frontend-wijzigingen.
+## Middag — zekerheid-lagen + regressievangnet
+
+Ed wilde garanderen dat de data wordt opgeslagen, niet alleen "hopelijk gaat
+het goed". Drie zekerheid-lagen erbij plus een vangnet zodat dezelfde klasse
+bug nooit meer onopgemerkt naar productie gaat.
+
+### Zekerheid-lagen (PR #11 — `feat/save-status-reliability`)
+
+1. **Header-indicator.** De consent-tekst is dynamisch: `Bezig met opslaan…` /
+   `Opgeslagen Xs geleden` / `Niet opgeslagen — probeer opnieuw`. Refresht
+   elke 5s. Visueel onderscheid via `.is-saving` / `.is-ok` / `.is-failed`
+   (blauw / groen / rood).
+2. **Retry-keten in `flushRecap`.** Bij niet-2xx of network-error volgen tot
+   3 retries op 1s/3s/7s (totaal ~11s). Vangt Fly auto-stop cold-starts op
+   zonder dat de host iets hoeft te doen. `flushRecap` is nu async/await en
+   geeft true/false terug.
+3. **Host-knop "Sla deze sessie nu op"** op de recap-pagina. Triggert
+   `flushRecap()` direct en toast't het resultaat (`Sessie opgeslagen om
+   HH:MM:SS` of `Opslaan mislukt — controleer netwerk`). Voor de host die
+   aan het eind van een sessie 100% zeker wil weten dat alles binnen is.
+
+Diff: +97 / -11 in `app/ceda-workshop.html`. Geen serverwijzigingen.
+
+### Regressievangnet (PR #12 — `feat/save-regression-test`)
+
+Playwright-test in `app/tests/recap-save.spec.mjs`: spint een verse server op
+tegen een `mkdtemp` + vrije poort, joint via de UI een nieuwe sessie, kiest
+een rol, wacht op een 2xx POST naar `/api/recap` (`page.waitForResponse`,
+geen hardcoded sleep), leest `state.json` van disk en asserteert `roomCode`,
+`userName` en `role`.
+
+Onafhankelijk van de PR #11 status-indicator — gebruikt de network-response,
+niet de UI-class, zodat hij zelfstandig op `main` werkt. Eén worker, geen
+parallel, ~6s end-to-end.
+
+`CLAUDE.md` verplicht nu `npm test` vóór elke `fly deploy`. Eerste keer:
+`npx playwright install chromium`. `app/test-results/` en
+`app/playwright-report/` toegevoegd aan `.gitignore`.
+
+### Smoke + productie-verificatie
+
+PR #11 lokaal getest, vier paden groen:
+
+| Trigger | Pad | Resultaat |
+|---|---|---|
+| Rol gekozen | 5s debounce → `fetch` | `is-ok`, disk update |
+| Host-knop | direct `fetch` | toast + `is-ok` in ~300ms |
+| Server down | retry-keten 4×, ~11.1s | `is-failed`, toast "Opslaan mislukt" |
+| Server up + host-knop | recovery | `is-ok` |
+
+PR #12 lokaal én op de met `main` gemergde branch: groen in ~5.5s.
+
+Na merge + deploy live getest op `ceda-regiobijeenkomst.fly.dev` met twee
+isolated browser-contexten (host `LiveHost` / guest `LiveGast` in room
+`ZTEZ`):
+
+- Beide auto-saves landen in `state.json` op het Fly-volume, binnen 14ms van
+  elkaar (`10:57:43.515Z` en `.529Z`). Per-room mutex deed zijn werk —
+  geen corruptie.
+- Beide `participants`-blokken zien elkaars `lastSeen` via WS-relay.
+- Status-indicator `is-ok` op beide tabs na de debounce.
+- Host-knop op host-tab → toast + `updatedAt` op disk advanceerde.
+- 60s heartbeat zichtbaar als extra save 11s ná de host-click.
+
+### Merge-volgorde + deploy
+
+1. `gh pr merge 12 --merge --delete-branch` — regressievangnet eerst zodat
+   het vanaf nu PR #11 zelf bewaakt.
+2. PR #11-branch gemerged met `main` → `npm test` opnieuw groen → push.
+3. `gh pr merge 11 --merge --delete-branch`.
+4. `cd app && npm test` als preflight → `fly deploy` vanaf repo-root.
+   Healthcheck `recapStorage:"ok"`, 19 fix-markers in live HTML
+   (`host-save-now`, `is-*`, `RETRY_DELAYS_MS`, `renderSaveStatus`).
+
+## Commits
+
+- `4ac9158` fix(frontend): herstel periodieke recap-save + sendBeacon op pagehide *(ochtend)*
+- `07579a2` test(recap): Playwright-regressie zodat een file-swap dit nooit meer kan slopen (PR #12)
+- `d0a06cd` feat(frontend): zichtbare save-status + retry-keten + host-save-knop (PR #11)
+- `8dd76de` Merge branch 'main' into feat/save-status-reliability *(preflight-run op de gemergde state)*
+- `51def57` Merge pull request #12
+- `48a8c95` Merge pull request #11
+
+Twee deploys vandaag op `ceda-regiobijeenkomst.fly.dev`: één ná `4ac9158`,
+één ná de twee middag-PR's.
+
+## Open einde dag
+
+- **~~Regressie-vangnet ontbreekt nog~~** — opgelost in PR #12. Volgende
+  natuurlijke stap: een GitHub Actions workflow die `npm test` op elke PR
+  draait, zodat de preflight niet meer afhangt van handmatige discipline
+  van wie er deploy't.
 - **Auto-stop window.** Fly `auto_stop_machines = "stop"` + cold-start kan
-  een POST kortstondig laten falen; `flushRecap`'s `catch {}` slikt dat. De
-  60s heartbeat vangt het op zolang de tab open blijft. Bij tab-close in
-  die race kan een beacon nog steeds wegvallen — acceptabel risico, niet
-  opgelost in deze fix.
+  een POST kortstondig laten falen. Goed deels afgedekt door de retry-keten
+  (1s/3s/7s) uit PR #11. Bij tab-close in die race kan een beacon nog steeds
+  wegvallen — acceptabel risico, niet opgelost.
+- **PR #11-retry-keten heeft geen eigen regressietest.** De Playwright-test
+  uit PR #12 dekt het happy-path. Een aparte test die de server tijdens een
+  save dropt en de retry/`is-failed`-status verifieert zou de zekerheid op
+  exact die laag in stand houden. Voor nu via handmatige browser-test
+  bewaakt (vandaag groen gedraaid).
