@@ -191,3 +191,29 @@ Commit: `002d02b` ci: draai Playwright-regressie automatisch op elke PR + push n
   save dropt en de retry/`is-failed`-status verifieert zou de zekerheid op
   exact die laag in stand houden. Voor nu via handmatige browser-test
   bewaakt (vandaag groen gedraaid).
+
+## Avond — Amsterdam-tijdzone in opgeslagen tijdstempels
+
+Verzoek van Ed: tijdstempels in `state.json` moeten Europe/Amsterdam zijn,
+niet UTC. Tot nu toe schreef `POST /api/recap` `new Date().toISOString()` —
+altijd `…Z`. Lastig leesbaar voor admins die de recaps doorbladeren.
+
+`nowInAmsterdam()`-helper toegevoegd in `app/server.js` (~20 regels). Bouwt
+ISO 8601 op via `Intl.DateTimeFormat` met `timeZone: 'Europe/Amsterdam'`
+en plakt de offset (`+02:00` / `+01:00`) er via `shortOffset` achter.
+DST-correct, blijft parseable door `new Date(...)`. `createdAt`,
+`updatedAt`, `savedAt` gebruiken hem nu. Admin-UI hoeft niet aangepast —
+`toLocaleString('nl-NL')` slikt zowel `Z` als `+02:00`.
+
+Playwright-test groen in 6s. Verificatie van het format los uitgevoerd:
+produceert `2026-05-27T13:50:07+02:00`, round-trips correct terug naar UTC.
+
+Plus losse doc-edit: `npm test` en `npx playwright test … --grep` toegevoegd
+aan het commands-blok in `CLAUDE.md` (stonden alleen in proza).
+
+Commits:
+- `a2f16ec` feat(recap): sla tijdstempels op in Europe/Amsterdam i.p.v. UTC
+- `932ea57` docs(claude): voeg test-commando's toe aan commands-blok
+
+Beide gepusht naar `origin/main`. Niet gedeployed — eerstvolgende
+`fly deploy` neemt het mee.
