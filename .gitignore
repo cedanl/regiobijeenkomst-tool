@@ -5,3 +5,5 @@ npm-debug.log*
 .env.local
 *.log
 data/recaps/
+app/test-results/
+app/playwright-report/

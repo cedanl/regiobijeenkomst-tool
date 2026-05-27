@@ -6,7 +6,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "test": "playwright test"
   },
   "dependencies": {
     "express": "^4.19.2",
@@ -15,5 +16,8 @@
   "engines": {
     "node": ">=18"
   },
-  "private": true
+  "private": true,
+  "devDependencies": {
+    "@playwright/test": "^1.60.0"
+  }
 }
