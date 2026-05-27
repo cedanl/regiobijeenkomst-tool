@@ -35,7 +35,10 @@ Open https://localhost:8443.
 
 ## Recaps lokaal bekijken
 
-POST naar `/api/recap` schrijft een bestand naar `data/recaps/<room>/<user>.json`.
+POST naar `/api/recap` merget deelnemer-state in `data/recaps/<room>/state.json`
+(per-room mutex, één bestand per kamer met alle deelnemers). Oude bijeenkomsten
+kunnen nog losse `<room>/<user>.json`-files bevatten (legacy per-deelnemer-model);
+die blijven leesbaar via de admin-UI.
 
 Browse-UI: http://localhost:3000/admin/recaps (zet eerst `ADMIN_PASSWORD` in
 je environment; zonder is de admin-route uit).

@@ -847,6 +847,15 @@
   @media (max-width: 880px) {
     .participants-cluster .room-pill { display: none; }
   }
+  .recap-consent {
+    font-size: 11px; color: rgba(0,0,0,0.55);
+    padding-left: 8px; border-left: 1px solid rgba(0,0,0,0.08);
+    cursor: help; letter-spacing: 0.01em;
+    white-space: nowrap;
+  }
+  @media (max-width: 1100px) {
+    .participants-cluster .recap-consent { display: none; }
+  }
 
   /* Author chip on insight cards */
   .card-author {
@@ -1570,6 +1579,7 @@
         <span class="conn-dot" id="conn-dot"></span>
         <div class="avatars-list" id="topbar-avatars"></div>
         <span class="room-pill" id="topbar-room-code"></span>
+        <span class="recap-consent" title="Sessie-state wordt periodiek samengevoegd op de CEDA-server bewaard voor analyse."><i class="fa-solid fa-cloud-arrow-up"></i> Opslag voor analyse</span>
       </div>
     </div>
   </div>
@@ -2447,6 +2457,7 @@ let sessionMode = 'join'; // join | create
 
 function saveState() {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e){}
+  scheduleAutoSave();
 }
 function loadState() {
   try {
@@ -2454,6 +2465,44 @@ function loadState() {
     return raw ? JSON.parse(raw) : null;
   } catch(e){ return null; }
 }
+
+// Centrale recap-save naar /api/recap.
+// Debounce 5s na elke saveState() + heartbeat 60s als vangnet. Op
+// tab-close gaat het via sendBeacon — fetch wordt door de browser
+// gecanceld op unload en is daar niet betrouwbaar.
+let __autoSaveTimer = null;
+let __autoSaveHeartbeat = null;
+function scheduleAutoSave() {
+  if (!state.roomCode || !state.userId) return;
+  clearTimeout(__autoSaveTimer);
+  __autoSaveTimer = setTimeout(flushRecap, 5000);
+}
+async function flushRecap() {
+  if (!state.roomCode || !state.userId) return;
+  try {
+    await fetch('/api/recap', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(state)
+    });
+  } catch {}
+}
+function flushRecapBeacon() {
+  if (!state.roomCode || !state.userId) return;
+  try {
+    const blob = new Blob([JSON.stringify(state)], { type: 'application/json' });
+    navigator.sendBeacon('/api/recap', blob);
+  } catch {}
+}
+function startAutoSaveHeartbeat() {
+  if (__autoSaveHeartbeat) return;
+  __autoSaveHeartbeat = setInterval(flushRecap, 60000);
+}
+startAutoSaveHeartbeat();
+window.addEventListener('pagehide', flushRecapBeacon);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') flushRecapBeacon();
+});
 
 /* =========================================================
    NAVIGATION

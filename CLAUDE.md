@@ -89,7 +89,7 @@ No lint, no automated tests, no build step — the frontend ships as-is. Verify 
 
 Admin browse-UI at `GET /admin/recaps` lists saved recaps with per-file download links. Basic-auth via `ADMIN_USER` (default `ceda`) and `ADMIN_PASSWORD`; if `ADMIN_PASSWORD` is unset the route returns 503 for every request rather than running open.
 
-`INSTRUCTIONS.md` is the human-readable quickstart (folder layout, local run, Fly deploy). `docs/sessions/<YYYY-MM-DD-topic>.md` is the running session log — read the latest before starting substantive work, and add a new entry for non-trivial changes.
+`README.md` is the canonical user-facing doc (Dutch, includes the Fly.io secrets setup and the `fly ssh console -C "tar …"` bulk-export recipe for recaps). `INSTRUCTIONS.md` is the shorter command-quickstart. `docs/sessions/<YYYY-MM-DD-topic>.md` is the running session log — read the latest before starting substantive work, and add a new entry for non-trivial changes. `docs/superpowers/{plans,specs}/` holds design docs and implementation plans from prior /superpowers workflows — useful background for re-touching features (folder structure, periodic recap), not load-bearing for new work.
 
 Production deploy: `docker/Dockerfile` + `fly.toml` (root) target Fly.io regio `ams` with a `recaps` volume mounted at `/data`. Build vanaf repo-root: `docker build -f docker/Dockerfile .`; deploy: `fly deploy`. `fly.toml` moet in build-context root staan — Fly resolveert `dockerfile` relatief aan zijn eigen locatie.
 
@@ -118,7 +118,7 @@ Endpoints:
 - `GET /admin/recaps/:room/:file` → JSON download per recap file
 - `WS /ws?room=<CODE>` → relay (broadcast to other peers in the same room)
 
-### `ceda-workshop.html` — single-file frontend (~3900 lines)
+### `ceda-workshop.html` — single-file frontend
 - All UI, state, persistence (localStorage), and sync logic live in one embedded `<script>`.
 - The `state` object is the single source of truth (`roomCode`, `userId`, `role`, `insights[]`, `selectedCases[]`, votes, …); `saveState()` / `loadState()` persist it.
 - Sync is **op-based**, not state-based. `broadcast(op)` sends, `applyRemoteOp(opMsg, peerId)` receives. Current ops:
