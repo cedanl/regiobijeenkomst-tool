@@ -852,7 +852,11 @@
     padding-left: 8px; border-left: 1px solid rgba(0,0,0,0.08);
     cursor: help; letter-spacing: 0.01em;
     white-space: nowrap;
+    transition: color 200ms ease;
   }
+  .recap-consent.is-saving { color: var(--np-blauw); }
+  .recap-consent.is-ok     { color: #1c7a3d; }
+  .recap-consent.is-failed { color: #c0392b; font-weight: 600; }
   @media (max-width: 1100px) {
     .participants-cluster .recap-consent { display: none; }
   }
@@ -1579,7 +1583,10 @@
         <span class="conn-dot" id="conn-dot"></span>
         <div class="avatars-list" id="topbar-avatars"></div>
         <span class="room-pill" id="topbar-room-code"></span>
-        <span class="recap-consent" title="Sessie-state wordt periodiek samengevoegd op de CEDA-server bewaard voor analyse."><i class="fa-solid fa-cloud-arrow-up"></i> Opslag voor analyse</span>
+        <span class="recap-consent" id="save-status" title="Sessie-state wordt periodiek samengevoegd op de CEDA-server bewaard voor analyse.">
+          <i class="fa-solid fa-cloud-arrow-up" id="save-status-icon"></i>
+          <span id="save-status-text">Opslag voor analyse</span>
+        </span>
       </div>
     </div>
   </div>
@@ -2209,6 +2216,7 @@
     <div id="recap-cases" class="recap-cases"></div>
 
     <div class="actions-bar">
+      <button class="btn btn-primary" id="host-save-now"><i class="fa-solid fa-cloud-arrow-up" id="host-save-icon"></i> <span id="host-save-text">Sla deze sessie nu op</span></button>
       <button class="btn btn-yellow" id="export-json"><i class="fa-solid fa-download"></i> Download als JSON</button>
       <button class="btn btn-green" id="export-text"><i class="fa-solid fa-file-lines"></i> Download als tekst</button>
       <button class="btn btn-ghost" id="print-recap"><i class="fa-solid fa-print"></i> Print / PDF</button>
@@ -2470,22 +2478,47 @@ function loadState() {
 // Debounce 5s na elke saveState() + heartbeat 60s als vangnet. Op
 // tab-close gaat het via sendBeacon — fetch wordt door de browser
 // gecanceld op unload en is daar niet betrouwbaar.
+//
+// Bij een mislukte POST volgt een retry-keten (1s, 3s, 7s) zodat een
+// kortdurende cold-start of netwerkhik niet meteen dataverlies oplevert.
+// De UI-status in de header toont saving / ok / failed zodat de host
+// weet of de oogst echt aankomt.
+const RETRY_DELAYS_MS = [1000, 3000, 7000];
 let __autoSaveTimer = null;
 let __autoSaveHeartbeat = null;
+let __saveStatus = 'idle'; // idle | saving | ok | failed
+let __lastSavedAt = null;
+
 function scheduleAutoSave() {
   if (!state.roomCode || !state.userId) return;
   clearTimeout(__autoSaveTimer);
-  __autoSaveTimer = setTimeout(flushRecap, 5000);
+  __autoSaveTimer = setTimeout(() => flushRecap(), 5000);
 }
 async function flushRecap() {
-  if (!state.roomCode || !state.userId) return;
-  try {
-    await fetch('/api/recap', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(state)
-    });
-  } catch {}
+  if (!state.roomCode || !state.userId) return false;
+  for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
+    __saveStatus = 'saving';
+    renderSaveStatus();
+    try {
+      const res = await fetch('/api/recap', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(state)
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      __saveStatus = 'ok';
+      __lastSavedAt = Date.now();
+      renderSaveStatus();
+      return true;
+    } catch (err) {
+      if (attempt < RETRY_DELAYS_MS.length) {
+        await new Promise(r => setTimeout(r, RETRY_DELAYS_MS[attempt]));
+      }
+    }
+  }
+  __saveStatus = 'failed';
+  renderSaveStatus();
+  return false;
 }
 function flushRecapBeacon() {
   if (!state.roomCode || !state.userId) return;
@@ -2496,8 +2529,45 @@ function flushRecapBeacon() {
 }
 function startAutoSaveHeartbeat() {
   if (__autoSaveHeartbeat) return;
-  __autoSaveHeartbeat = setInterval(flushRecap, 60000);
+  __autoSaveHeartbeat = setInterval(() => flushRecap(), 60000);
 }
+
+function fmtAgo(ts) {
+  if (!ts) return '';
+  const s = Math.round((Date.now() - ts) / 1000);
+  if (s < 5) return 'zojuist';
+  if (s < 60) return s + 's geleden';
+  return Math.floor(s / 60) + 'm geleden';
+}
+function renderSaveStatus() {
+  const el = document.getElementById('save-status');
+  if (!el) return;
+  const icon = document.getElementById('save-status-icon');
+  const text = document.getElementById('save-status-text');
+  el.classList.remove('is-saving', 'is-ok', 'is-failed');
+  if (__saveStatus === 'saving') {
+    el.classList.add('is-saving');
+    icon.className = 'fa-solid fa-arrows-rotate fa-spin';
+    text.textContent = 'Bezig met opslaan…';
+    el.title = 'State wordt naar de CEDA-server gestuurd.';
+  } else if (__saveStatus === 'ok') {
+    el.classList.add('is-ok');
+    icon.className = 'fa-solid fa-cloud-arrow-up';
+    text.textContent = 'Opgeslagen ' + fmtAgo(__lastSavedAt);
+    el.title = 'Laatste opslag om ' + new Date(__lastSavedAt).toLocaleTimeString('nl-NL');
+  } else if (__saveStatus === 'failed') {
+    el.classList.add('is-failed');
+    icon.className = 'fa-solid fa-triangle-exclamation';
+    text.textContent = 'Niet opgeslagen — probeer opnieuw';
+    el.title = 'Opslag mislukt. Klik op "Sla deze sessie nu op" in de recap, of controleer je netwerk.';
+  } else {
+    icon.className = 'fa-solid fa-cloud-arrow-up';
+    text.textContent = 'Opslag voor analyse';
+    el.title = 'Sessie-state wordt periodiek samengevoegd op de CEDA-server bewaard voor analyse.';
+  }
+}
+setInterval(renderSaveStatus, 5000); // refresh "Xs geleden"
+
 startAutoSaveHeartbeat();
 window.addEventListener('pagehide', flushRecapBeacon);
 document.addEventListener('visibilitychange', () => {
@@ -3178,6 +3248,22 @@ document.getElementById('export-text').addEventListener('click', () => {
   download(new Blob([t], { type:'text/plain' }), `ceda-workshop-${ymd()}.txt`);
 });
 document.getElementById('print-recap').addEventListener('click', () => window.print());
+
+document.getElementById('host-save-now').addEventListener('click', async () => {
+  const btn = document.getElementById('host-save-now');
+  const icon = document.getElementById('host-save-icon');
+  const txt = document.getElementById('host-save-text');
+  btn.disabled = true;
+  icon.className = 'fa-solid fa-arrows-rotate fa-spin';
+  txt.textContent = 'Bezig met opslaan…';
+  const ok = await flushRecap();
+  btn.disabled = false;
+  icon.className = 'fa-solid fa-cloud-arrow-up';
+  txt.textContent = 'Sla deze sessie nu op';
+  toast(ok
+    ? 'Sessie opgeslagen om ' + new Date().toLocaleTimeString('nl-NL')
+    : 'Opslaan mislukt — controleer netwerk en probeer nogmaals');
+});
 document.getElementById('reset-all').addEventListener('click', () => {
   if (!confirm('Weet je zeker dat je álles wilt resetten? Alle inzichten, stemmen en use cases verdwijnen — voor jou. Andere deelnemers in dezelfde sessie behouden hun lokale kopie.')) return;
   stopTimer();
