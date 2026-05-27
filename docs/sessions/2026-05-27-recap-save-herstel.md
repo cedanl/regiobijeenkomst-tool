@@ -162,12 +162,26 @@ isolated browser-contexten (host `LiveHost` / guest `LiveGast` in room
 Twee deploys vandaag op `ceda-regiobijeenkomst.fly.dev`: één ná `4ac9158`,
 één ná de twee middag-PR's.
 
+## Avond — CI-vangnet (PR #13)
+
+Het laatste handmatige stuk afgesloten: `.github/workflows/test.yml` draait
+`npm test` op elke PR en push-naar-main. Checkout → setup-node@v4 (Node 20
++ npm-cache) → `npm ci` → `npx playwright install chromium` → `npm test`,
+met `working-directory: app`. Eigen PR-run als live-test: groen in 29s.
+CLAUDE.md noemt zowel het CI-vangnet als de lokale preflight (Fly deploy
+gaat buiten GH om, dus handmatig `npm test` vóór `fly deploy` blijft de
+aanrader).
+
+Niet-blokkerende deprecation-waarschuwing van GH: Node 20-actions worden
+in september 2026 vervangen door Node 24. Werkt tot dan onveranderd door,
+later upgraden naar `@v5`-tags zodra die uit zijn.
+
+Commit: `002d02b` ci: draai Playwright-regressie automatisch op elke PR + push naar main (PR #13, `e5c37ac` merge).
+
 ## Open einde dag
 
-- **~~Regressie-vangnet ontbreekt nog~~** — opgelost in PR #12. Volgende
-  natuurlijke stap: een GitHub Actions workflow die `npm test` op elke PR
-  draait, zodat de preflight niet meer afhangt van handmatige discipline
-  van wie er deploy't.
+- **~~Regressie-vangnet ontbreekt nog~~** — opgelost in PR #12.
+- **~~Geen CI-workflow~~** — opgelost in PR #13.
 - **Auto-stop window.** Fly `auto_stop_machines = "stop"` + cold-start kan
   een POST kortstondig laten falen. Goed deels afgedekt door de retry-keten
   (1s/3s/7s) uit PR #11. Bij tab-close in die race kan een beacon nog steeds
