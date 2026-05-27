@@ -18,6 +18,25 @@ const USER_ID_RE = /^[A-Za-z0-9_-]{3,40}$/;
 const ADMIN_USER = process.env.ADMIN_USER || 'ceda';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
 
+// ISO 8601 timestamp in Europe/Amsterdam (bv. "2026-05-27T15:23:45+02:00").
+// Houdt DST automatisch goed via Intl; blijft parseable door `new Date(...)`.
+function nowInAmsterdam() {
+  const d = new Date();
+  const local = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'Europe/Amsterdam',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hour12: false,
+  }).format(d).replace(' ', 'T');
+  const tzPart = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Europe/Amsterdam',
+    timeZoneName: 'shortOffset',
+  }).formatToParts(d).find(p => p.type === 'timeZoneName').value;
+  const m = tzPart.match(/GMT([+-])(\d{1,2})(?::?(\d{2}))?/);
+  const offset = m ? `${m[1]}${m[2].padStart(2, '0')}:${m[3] || '00'}` : 'Z';
+  return `${local}${offset}`;
+}
+
 // Probe at boot so a misconfigured volume fails fast instead of silently
 // breaking every save during a live workshop. Result is exposed via /healthz.
 let recapStorageOk = false;
@@ -153,12 +172,12 @@ app.post('/api/recap', express.json({ limit: '512kb' }), async (req, res) => {
         }
         merged = {
           roomCode: room,
-          createdAt: new Date().toISOString(),
+          createdAt: nowInAmsterdam(),
           participants: {}
         };
       }
 
-      const now = new Date().toISOString();
+      const now = nowInAmsterdam();
       merged.updatedAt = now;
       merged.participants[userId] = { savedAt: now, state: body };
 
