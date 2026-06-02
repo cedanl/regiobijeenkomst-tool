@@ -2699,7 +2699,7 @@ document.getElementById('connect-btn').addEventListener('click', async () => {
     return;
   }
   const code = document.getElementById('room-code').value.trim().toUpperCase();
-  await joinSessionRoom(code);
+  await joinSessionRoom(code, true);
 });
 document.getElementById('room-code').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') document.getElementById('connect-btn').click();
@@ -3689,7 +3689,7 @@ function setSessionStatus(status, text) {
   renderTopbarParticipants();
 }
 
-async function joinSessionRoom(code) {
+async function joinSessionRoom(code, resetContent = false) {
   code = (code || '').trim().toUpperCase();
   if (!code || code.length < 3) { toast('Voer een geldige sessiecode in (min. 3 tekens)'); return false; }
   if (!/^[A-Z0-9]+$/.test(code)) { toast('Sessiecode mag alleen letters en cijfers bevatten'); return false; }
@@ -3701,6 +3701,20 @@ async function joinSessionRoom(code) {
   if (wsReconnectTimer) { clearTimeout(wsReconnectTimer); wsReconnectTimer = null; }
   if (wsClient) { try { wsClient.close(1000, 'reconnect'); } catch(e){} wsClient = null; }
   if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
+
+  // Bij het starten van of overstappen naar een ándere sessie beginnen we
+  // met een schone lei: anders blijven inzichten, cases en stemmen van een
+  // vorige sessie staan — en lekken ze via de state-sync zelfs naar de
+  // andere deelnemers in de nieuwe sessie. Eigen identiteit (naam, rol)
+  // blijft behouden. Reconnect en herladen van dezelfde sessie raken dit
+  // niet (resetContent=false), dus lopende oogst blijft intact.
+  if (resetContent && state.roomCode !== code) {
+    const { userId, userName, role } = state;
+    state = initialState();
+    state.userId = userId;
+    state.userName = userName;
+    state.role = role;
+  }
 
   state.roomCode = code;
   saveState();

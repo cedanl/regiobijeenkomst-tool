@@ -107,3 +107,60 @@ test('rol kiezen schrijft state.json met deelnemer-state naar de server', async 
   expect(participants[0].state.role).toBe('praktijk');
   expect(participants[0].state.roomCode).toBe(roomCode);
 });
+
+// Regressie voor de bug waar dit alles om draait: bij het starten van een
+// NIEUWE sessie (nieuwe code) mochten resultaten van een vorige sessie nog
+// in beeld staan — en lekten ze zelfs via de state-sync naar de andere
+// deelnemers. De fix wist de oogst zodra je naar een andere room verbindt.
+test('nieuwe sessie wist resultaten van een vorige sessie', async ({ page }) => {
+  await page.goto(`http://localhost:${port}/`);
+
+  // Simuleer een vorige sessie waarvan de oogst nog in localStorage hangt
+  // (roomCode null = gebruiker heeft die sessie verlaten, content blijft).
+  await page.evaluate(() => {
+    localStorage.setItem('ceda-workshop-user', JSON.stringify({ userId: 'u_prev', userName: 'Vorige' }));
+    localStorage.setItem('ceda-workshop-v2', JSON.stringify({
+      userId: 'u_prev', userName: 'Vorige', roomCode: null, role: 'praktijk',
+      insights: [{ id: 'oud1', type: 'kans', text: 'inzicht uit vorige sessie', role: 'praktijk', authorId: 'u_prev', authorName: 'Vorige', ts: 1, votes: {} }],
+      cases: { oud1: { doel: 'oud doel' } }, selectedCases: ['oud1'], participants: {},
+      timer: { remaining: 5400, running: false, lastTick: null }
+    }));
+  });
+  await page.reload();
+
+  // Start een nieuwe sessie met een verse code.
+  await page.getByRole('button', { name: /Start een nieuwe sessie/ }).click();
+  await page.getByRole('button', { name: /Maak sessie/ }).click();
+  await expect(page.locator('#topbar-room-code')).toHaveText(/^[A-Z0-9]{3,16}$/);
+
+  // De oogst van de vorige sessie moet weg zijn; eigen identiteit blijft.
+  const persisted = await page.evaluate(() => JSON.parse(localStorage.getItem('ceda-workshop-v2')));
+  expect(persisted.insights).toHaveLength(0);
+  expect(persisted.selectedCases).toHaveLength(0);
+  expect(Object.keys(persisted.cases)).toHaveLength(0);
+  expect(persisted.userName).toBe('Vorige');
+  expect(persisted.role).toBe('praktijk');
+});
+
+// Keerzijde van dezelfde gate: herladen / auto-herverbinden met DEZELFDE
+// sessiecode mag de oogst juist NIET wissen. Dit is wat zou breken als de
+// reset-conditie te ruim is.
+test('herverbinden met dezelfde sessiecode behoudt de oogst', async ({ page }) => {
+  await page.goto(`http://localhost:${port}/`);
+
+  await page.evaluate(() => {
+    localStorage.setItem('ceda-workshop-user', JSON.stringify({ userId: 'u_keep', userName: 'Blijver' }));
+    localStorage.setItem('ceda-workshop-v2', JSON.stringify({
+      userId: 'u_keep', userName: 'Blijver', roomCode: 'KEEPME', role: 'praktijk',
+      insights: [{ id: 'houd1', type: 'kans', text: 'moet blijven', role: 'praktijk', authorId: 'u_keep', authorName: 'Blijver', ts: 1, votes: {} }],
+      cases: {}, selectedCases: [], participants: {},
+      timer: { remaining: 5400, running: false, lastTick: null }
+    }));
+  });
+  await page.reload(); // init() auto-herverbindt naar KEEPME met resetContent=false
+
+  await expect(page.locator('#topbar-room-code')).toHaveText('KEEPME');
+  const persisted = await page.evaluate(() => JSON.parse(localStorage.getItem('ceda-workshop-v2')));
+  expect(persisted.insights).toHaveLength(1);
+  expect(persisted.insights[0].id).toBe('houd1');
+});
