@@ -48,4 +48,38 @@ driven, chromium):
 
 `cd app && npm test` → 3 passed (incl. bestaande recap-test, geen regressie).
 
-Nog niet gecommit/gedeployed — wacht op akkoord van Ed.
+Gecommit `63a38d0`, gepusht naar `origin/main`.
+
+## Vervolg — edge dichtgezet + data-safety (verzoek Ed)
+
+Ed wilde vóór deploy óók de "leave → rejoin zelfde code wist content"-edge
+opgelost, plus een smoketest van alle opslag-mechanismen ("DATA mag nooit
+verloren gaan").
+
+**Edge-fix via `state.contentRoom`.** Nieuw lokaal veld dat bijhoudt bij welke
+room de huidige oogst hoort (niet gesynct — staat niet in `serializeState`).
+De reset-gate vergelijkt nu `contentRoom !== code` i.p.v. `roomCode !== code`.
+`leaveSessionRoom` zet `roomCode=null` maar laat `contentRoom` staan, dus
+opnieuw joinen met dezelfde code → `contentRoom === code` → géén reset. Een
+écht andere code → wél reset. Migratie: `contentRoom` afgeleid uit `roomCode`,
+of sentinel `'__legacy__'` bij oude saves met oogst maar zonder room (zodat de
+msg-1 fix ook voor legacy-state blijft werken).
+
+**Data-safety.** `flushRecap`/beacon POSTen de live `state` onder
+`state.roomCode`; een reset vóór de centrale save = dataverlies. Daarom:
+`leaveSessionRoom` doet nu `flushRecap()` (fetch, geen 64KB-cap zoals beacon)
+vóór het nullen van `roomCode` — body wordt synchroon opgebouwd, dus de eerste
+POST draagt nog de juiste room. Reset-blok heeft een `flushRecapBeacon()`
+-backstop. Reset wist alleen lokaal; centraal blijft de oude room-file staan.
+
+**Tests** (`app/tests/recap-save.spec.mjs`, nu 5): toegevoegd
+3. *verlaten en opnieuw met dezelfde code joinen behoudt de oogst*
+4. *sessie verlaten schrijft een vers inzicht alsnog centraal weg* — voegt een
+   inzicht toe binnen het debounce-venster en verlaat meteen; bewijst dat de
+   leave-flush het naar `state.json` brengt. → `npm test` 5 passed.
+
+**Browser-smoketest** (chrome-devtools, echte UI): (a) debounce-autosave
+schrijft `ZTGX/state.json` ✓; (b) leave-flush redt een vers inzicht dat nog
+niet auto-opgeslagen was ✓; (d) rejoin `ZTGX` behoudt beide inzichten lokaal
+✓; nieuwe sessie `VDDD` start leeg, oude `ZTGX`-file blijft volledig intact,
+geen lek tussen rooms ✓.

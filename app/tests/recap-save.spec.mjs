@@ -164,3 +164,66 @@ test('herverbinden met dezelfde sessiecode behoudt de oogst', async ({ page }) =
   expect(persisted.insights).toHaveLength(1);
   expect(persisted.insights[0].id).toBe('houd1');
 });
+
+// Het tweede deel van de fix: een sessie VERLATEN en daarna met DEZELFDE code
+// opnieuw joinen mag de oogst NIET wissen. Na verlaten staat roomCode op null
+// maar contentRoom blijft de oude room — dus de gate herkent "zelfde sessie".
+test('verlaten en opnieuw met dezelfde code joinen behoudt de oogst', async ({ page }) => {
+  await page.goto(`http://localhost:${port}/`);
+
+  // Staat zoals na een Verlaat: roomCode null, contentRoom nog gezet, oogst er.
+  await page.evaluate(() => {
+    localStorage.setItem('ceda-workshop-user', JSON.stringify({ userId: 'u_back', userName: 'Terugkomer' }));
+    localStorage.setItem('ceda-workshop-v2', JSON.stringify({
+      userId: 'u_back', userName: 'Terugkomer', roomCode: null, contentRoom: 'SAME1', role: 'praktijk',
+      insights: [{ id: 'terug1', type: 'kans', text: 'mag niet verdwijnen na rejoin', role: 'praktijk', authorId: 'u_back', authorName: 'Terugkomer', ts: 1, votes: {} }],
+      cases: {}, selectedCases: [], participants: {},
+      timer: { remaining: 5400, running: false, lastTick: null }
+    }));
+  });
+  await page.reload();
+
+  // Join exact dezelfde code opnieuw (join-modus is de default).
+  await page.locator('#room-code').fill('SAME1');
+  await page.locator('#connect-btn').click();
+  await expect(page.locator('#topbar-room-code')).toHaveText('SAME1');
+
+  const persisted = await page.evaluate(() => JSON.parse(localStorage.getItem('ceda-workshop-v2')));
+  expect(persisted.insights).toHaveLength(1);
+  expect(persisted.insights[0].id).toBe('terug1');
+});
+
+// DATA MAG NOOIT VERLOREN GAAN: een inzicht dat vlak vóór het verlaten is
+// toegevoegd (binnen het 5s-debouncevenster, dus nog niet auto-opgeslagen)
+// moet door de flush in leaveSessionRoom alsnog centraal op disk belanden.
+test('sessie verlaten schrijft een vers inzicht alsnog centraal weg', async ({ page }) => {
+  await page.goto(`http://localhost:${port}/`);
+
+  await page.locator('#user-name').fill('LeaveSaver');
+  await page.getByRole('button', { name: /Start een nieuwe sessie/ }).click();
+  await page.getByRole('button', { name: /Maak sessie/ }).click();
+  const codeLoc = page.locator('#topbar-room-code');
+  await expect(codeLoc).toHaveText(/^[A-Z0-9]{3,16}$/);
+  const room = (await codeLoc.textContent()).trim();
+
+  // Rol kiezen → naar fase 1, en daar een vers inzicht toevoegen.
+  await page.getByRole('button', { name: /Onderwijspraktijk/ }).click();
+  await page.getByRole('button', { name: /Naar fase 1/ }).click();
+  await page.locator('textarea[data-input="kans"]').fill('VERS inzicht vlak voor verlaten');
+  await page.locator('button[data-add="kans"]').click();
+
+  // Meteen verlaten — ruim binnen de 5s-debounce, zodat alleen de leave-flush
+  // dit inzicht naar de server kan brengen. We wachten op die POST.
+  const recapPostOk = page.waitForResponse(
+    r => r.url().includes('/api/recap') && r.request().method() === 'POST' && r.ok(),
+    { timeout: 15000 }
+  );
+  await page.getByRole('button', { name: /Welkom/ }).click();
+  await page.locator('#leave-room').click();
+  await recapPostOk;
+
+  // Het verse inzicht moet in de centrale state.json staan — niet verloren.
+  const data = JSON.parse(await readFile(path.join(recapDir, room, 'state.json'), 'utf8'));
+  const allInsights = Object.values(data.participants).flatMap(p => p.state.insights || []);
+  expect(allInsights.some(i => i.text === 'VERS inzicht vlak voor verlaten')).toBe(true);
+});

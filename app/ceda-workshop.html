@@ -2430,6 +2430,7 @@ const initialState = () => ({
   userId: _user.userId,
   userName: _user.userName || '',
   roomCode: null,
+  contentRoom: null, // room waar de huidige oogst bij hoort (lokaal, niet gesynct)
   role: null,
   insights: [],     // { id, type, text, role, authorId, authorName, ts, votes: { userId: count } }
   cases: {},        // { insightId: { doel, actoren, resultaat, ai_data, _ts_*: ms } }
@@ -2443,6 +2444,13 @@ let state = loadState() || initialState();
 if (!state.userId) state.userId = _user.userId;
 if (typeof state.userName !== 'string') state.userName = _user.userName || '';
 if (!state.participants) state.participants = {};
+// contentRoom (de room waar de oogst bij hoort) bestaat in oudere saves nog
+// niet. Afleiden uit roomCode; staat die op null maar is er wél oogst, dan
+// gebruiken we een sentinel die nooit een echte code is — zodat het starten
+// van een nieuwe sessie die oude oogst alsnog opruimt.
+if (state.contentRoom === undefined) {
+  state.contentRoom = state.roomCode || (state.insights && state.insights.length ? '__legacy__' : null);
+}
 state.insights.forEach(i => {
   if (typeof i.votes === 'number') {
     const old = i.votes;
@@ -3702,13 +3710,19 @@ async function joinSessionRoom(code, resetContent = false) {
   if (wsClient) { try { wsClient.close(1000, 'reconnect'); } catch(e){} wsClient = null; }
   if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
 
-  // Bij het starten van of overstappen naar een ándere sessie beginnen we
-  // met een schone lei: anders blijven inzichten, cases en stemmen van een
-  // vorige sessie staan — en lekken ze via de state-sync zelfs naar de
-  // andere deelnemers in de nieuwe sessie. Eigen identiteit (naam, rol)
-  // blijft behouden. Reconnect en herladen van dezelfde sessie raken dit
-  // niet (resetContent=false), dus lopende oogst blijft intact.
-  if (resetContent && state.roomCode !== code) {
+  // Schone lei bij overstappen naar een ándere sessie: anders blijven
+  // inzichten, cases en stemmen van een vorige sessie staan — en lekken ze
+  // via de state-sync zelfs naar de andere deelnemers in de nieuwe sessie.
+  // We vergelijken met state.contentRoom (de room waar de huidige oogst bij
+  // hoort), niet met roomCode: zo behoudt "sessie verlaten en daarna met
+  // DEZELFDE code opnieuw joinen" de oogst, terwijl een écht andere code wél
+  // wist. Identiteit (naam, rol) blijft behouden. Reconnect/herladen van
+  // dezelfde sessie raakt dit niet (resetContent=false).
+  if (resetContent && state.contentRoom && state.contentRoom !== code) {
+    // Backstop tegen dataverlies: schrijf de oude oogst centraal weg vóór we
+    // wissen. In de praktijk dekt de flush in leaveSessionRoom dit al (je moet
+    // een sessie eerst verlaten); deze beacon vangt eventuele overige paden af.
+    flushRecapBeacon();
     const { userId, userName, role } = state;
     state = initialState();
     state.userId = userId;
@@ -3717,6 +3731,7 @@ async function joinSessionRoom(code, resetContent = false) {
   }
 
   state.roomCode = code;
+  state.contentRoom = code;
   saveState();
 
   return new Promise((resolve) => {
@@ -3779,6 +3794,13 @@ async function joinSessionRoom(code, resetContent = false) {
 function leaveSessionRoom() {
   if (wsReconnectTimer) { clearTimeout(wsReconnectTimer); wsReconnectTimer = null; }
   if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
+  // Bewaar de oogst centraal vóór we de room loslaten, zodat wijzigingen uit
+  // de laatste debounce-seconden niet verloren gaan. flushRecap() bouwt de
+  // POST-body synchroon op met de huidige (nog niet-genulde) roomCode, dus de
+  // eerste poging draagt de juiste sessie. Niet awaiten — Verlaat mag niet
+  // blokkeren. contentRoom laten we bewust staan: opnieuw joinen met dezelfde
+  // code herkent de oogst dan en behoudt hem.
+  flushRecap();
   state.roomCode = null;
   saveState();
   if (wsClient) {
