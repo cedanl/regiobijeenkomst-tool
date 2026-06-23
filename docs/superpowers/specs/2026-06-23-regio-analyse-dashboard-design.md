@@ -13,10 +13,13 @@ zit nu versnipperd in vier losse `state.json`-recaps. We willen die eenduidig en
 overzichtelijk terugpresenteren aan onderwijsinstellingen, zodat we samen 2 à 3
 use cases kunnen kiezen om in co-creatie uit te werken.
 
-De oplossing: één analyse-/presentatiepagina met **twee datavisualisaties**:
+De oplossing: één analyse-/presentatiepagina met **twee datavisualisaties** plus
+een **1-A4 verslag**:
 
 1. **Kansen & inzichten** met stemmen/prioriteit — "welke behoeften leven er?"
 2. **Use cases** — overzicht om in gesprek de co-creatie-kandidaten te kiezen.
+3. **1-A4 verslag** — een AI-gegenereerd, bewerkbaar managementverslag (via de
+   Claude API), eveneens naar PDF te exporteren.
 
 ## Gebruik
 
@@ -72,6 +75,8 @@ clusteren is bewust buiten scope — zie *Buiten scope*.)
 
 - Nieuwe route `GET /admin/analyse`, achter de bestaande `requireAdmin`
   basic-auth (503 als `ADMIN_PASSWORD` ontbreekt) — consistent met `/admin/recaps`.
+- Nieuwe route `POST /admin/verslag` (zelfde basic-auth) die het AI-verslag
+  genereert via de Claude API en de tekst teruggeeft als JSON.
 - Linkje vanaf `/admin/recaps` naar het dashboard.
 - Server leest + aggregeert, serveert dan een **aparte pagina** `app/analyse.html`
   met de data inline ingespoten als JSON (zelfde patroon als de hoofdpagina:
@@ -101,6 +106,29 @@ Eén pagina-sectie, twee onderdelen op dezelfde filters:
 - **Shortlist-markering (★):** klik markeert een kaart als co-creatie-kandidaat,
   handig om live samen 2-3 te kiezen. Opgeslagen in **localStorage** van de
   admin-pagina (blijft lokaal in de browser; raakt de gedeelde recap-data niet).
+
+## Visualisatie 3 — 1-A4 verslag (AI-gegenereerd, bewerkbaar)
+
+Een bondig managementverslag op één A4, bedoeld om naast de visualisaties mee te
+sturen of in een deck te plakken.
+
+- **Generatie (server-side):** een "Genereer verslag"-actie roept een nieuwe
+  admin-route aan; de server bouwt dezelfde geaggregeerde dataset (KPI's +
+  top-behoeften + use cases) en stuurt die in **één** `messages.create`-call naar
+  de Claude API met een Nederlandse instructie ("schrijf een bondig 1-A4
+  managementverslag: inleiding, belangrijkste behoeften, advies over
+  kandidaat-use-cases"). De API-key blijft server-side (Fly-secret
+  `ANTHROPIC_API_KEY`) — komt nooit in de browser.
+- **Model & call:** `claude-opus-4-8`, adaptive thinking aan, `max_tokens` ruim
+  genoeg voor één A4 (~4000). Officiële SDK `@anthropic-ai/sdk`. Niet-streaming
+  (korte output). Lage volumes (admin-only), dus geen caching nodig.
+- **Bewerkbaar vóór export:** het gegenereerde verslag verschijnt in
+  `contenteditable`-velden; wijzigingen worden in **localStorage** bewaard zodat
+  je het kunt bijschaven vóór de PDF-export. Een "opnieuw genereren"-knop haalt
+  een verse versie op (overschrijft na bevestiging).
+- **Graceful fallback:** is `ANTHROPIC_API_KEY` niet gezet, dan toont de pagina
+  in plaats van het AI-verslag een **getemplate feitelijke samenvatting** (KPI's
+  + top-lijsten zonder narratief). Het dashboard blijft dus altijd werken.
 
 ## Filters
 
@@ -142,8 +170,14 @@ inzichten, totaal stemmen, top-inzicht, en het aantal use-case-kaarten.
 
 ## Bestanden die raken
 
-- `app/server.js` — nieuwe route `/admin/analyse`, helpers (kamers lezen,
-  canoniek maken, aggregeren), regio-map, link vanaf `/admin/recaps`.
-- `app/analyse.html` — nieuwe pagina (filters, beide visualisaties, print-CSS).
+- `app/server.js` — nieuwe routes `/admin/analyse` + `POST /admin/verslag`,
+  helpers (kamers lezen, canoniek maken, aggregeren), regio-map, Claude-API-call,
+  link vanaf `/admin/recaps`.
+- `app/analyse.html` — nieuwe pagina (filters, beide visualisaties, 1-A4 verslag,
+  print-CSS).
+- `app/package.json` — nieuwe dependency `@anthropic-ai/sdk`.
 - `docker/Caddyfile` — CSP gelijktrekken indien nodig.
 - `tests/` — Playwright-test voor `/admin/analyse`.
+
+**Nieuwe env var:** `ANTHROPIC_API_KEY` (Fly-secret) — optioneel; zonder de key
+valt het verslag terug op de getemplate samenvatting.
