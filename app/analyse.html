@@ -256,10 +256,13 @@ function initRegio() {
     });
     const out = await res.json().catch(() => ({}));
     if (!res.ok || !out.ok) { alert('Opslaan mislukt: ' + (out.error || res.status)); return; }
-    window.__ANALYSE__ = out;
     Object.assign(A, out);
+    window.__ANALYSE__ = A;
     document.getElementById('regio-dialog').close();
-    initFilters();
+    // Ververs alleen de regio-opties (listeners blijven één keer gebonden) en
+    // reset de regio-filter, zodat de zichtbare keuze en de state niet uiteenlopen.
+    renderRegioOptions();
+    filters.regio = 'alle';
     render();
   });
 }
@@ -296,10 +299,13 @@ async function generateVerslag() {
 
 function render() { renderKpis(); renderViz1(); renderViz2(); }
 
-function initFilters() {
+function renderRegioOptions() {
   const sel = document.getElementById('f-regio');
   sel.innerHTML = '<option value="alle">alle</option>' + A.regios.map(r => `<option value="${esc(r.code)}">${esc(r.label)}</option>`).join('');
-  sel.addEventListener('change', e => { filters.regio = e.target.value; render(); });
+}
+function initFilters() {
+  renderRegioOptions();
+  document.getElementById('f-regio').addEventListener('change', e => { filters.regio = e.target.value; render(); });
   document.getElementById('f-type').addEventListener('change', e => { filters.type = e.target.value; render(); });
   document.getElementById('f-rol').addEventListener('change', e => { filters.rol = e.target.value; render(); });
 }
