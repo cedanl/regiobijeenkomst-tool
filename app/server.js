@@ -8,7 +8,8 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { DEFAULT_REGIOS, validateRegios, aggregate } from './analyse-lib.mjs';
+import { DEFAULT_REGIOS, validateRegios, aggregate, buildVerslagPrompt, buildFallbackVerslag } from './analyse-lib.mjs';
+import Anthropic from '@anthropic-ai/sdk';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3000;
@@ -18,6 +19,7 @@ const ROOM_CODE_RE = /^[A-Z0-9]{3,16}$/;
 const USER_ID_RE = /^[A-Za-z0-9_-]{3,40}$/;
 const ADMIN_USER = process.env.ADMIN_USER || 'ceda';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
 
 // ISO 8601 timestamp in Europe/Amsterdam (bv. "2026-05-27T15:23:45+02:00").
 // Houdt DST automatisch goed via Intl; blijft parseable door `new Date(...)`.
@@ -442,6 +444,34 @@ app.post('/admin/regios', requireAdmin, express.json({ limit: '64kb' }), async (
   } catch (err) {
     console.error('[regios] schrijven faalde', { code: err.code, message: err.message });
     res.status(500).json({ ok: false, error: 'storage failure' });
+  }
+});
+
+app.post('/admin/verslag', requireAdmin, express.json({ limit: '64kb' }), async (req, res) => {
+  let data;
+  try {
+    data = aggregate(await readAllRooms(), await readRegios());
+  } catch (err) {
+    console.error('[verslag] aggregatie faalde', { code: err.code, message: err.message });
+    return res.status(500).json({ ok: false, error: 'aggregatie faalde' });
+  }
+  // Geen sleutel → meteen de feitelijke samenvatting. Dashboard blijft bruikbaar.
+  if (!ANTHROPIC_API_KEY) {
+    return res.json({ ok: true, fallback: true, verslag: buildFallbackVerslag(data) });
+  }
+  try {
+    const client = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
+    const msg = await client.messages.create({
+      model: 'claude-opus-4-8',
+      max_tokens: 4000,
+      thinking: { type: 'adaptive' },
+      messages: [{ role: 'user', content: buildVerslagPrompt(data) }],
+    });
+    const text = msg.content.filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
+    res.json({ ok: true, fallback: false, model: 'claude-opus-4-8', verslag: text || buildFallbackVerslag(data) });
+  } catch (err) {
+    console.error('[verslag] Claude-call faalde — fallback', { message: err.message });
+    res.json({ ok: true, fallback: true, error: 'ai_failed', verslag: buildFallbackVerslag(data) });
   }
 });
 

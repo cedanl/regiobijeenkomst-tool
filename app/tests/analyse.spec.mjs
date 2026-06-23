@@ -63,7 +63,7 @@ test.beforeAll(async () => {
   base = `http://localhost:${port}`;
   server = spawn('node', ['server.js'], {
     cwd: APP_DIR,
-    env: { ...process.env, PORT: String(port), HOST: '127.0.0.1', RECAP_DIR: recapDir, ADMIN_USER: ADMIN.username, ADMIN_PASSWORD: ADMIN.password },
+    env: { ...process.env, PORT: String(port), HOST: '127.0.0.1', RECAP_DIR: recapDir, ADMIN_USER: ADMIN.username, ADMIN_PASSWORD: ADMIN.password, ANTHROPIC_API_KEY: '' },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   await waitForBoot(server);
@@ -173,4 +173,21 @@ test('regio-beheer: ongemapte kamer toevoegen → na opslaan telt die mee', asyn
   expect(data.regios.map(r => r.code)).toContain('TEST1');
   expect(data.insights.some(i => i.regioCode === 'TEST1')).toBe(true);
   expect(data.unmappedRooms).not.toContain('TEST1');
+});
+
+test('POST /admin/verslag valt terug op getemplate samenvatting zonder API-sleutel', async () => {
+  const res = await fetch(`${base}/admin/verslag`, {
+    method: 'POST', headers: { authorization: authHeader, 'content-type': 'application/json' }, body: '{}',
+  });
+  expect(res.ok).toBe(true);
+  const out = await res.json();
+  expect(out.ok).toBe(true);
+  expect(out.fallback).toBe(true);
+  expect(out.verslag).toContain('behoeften');
+  expect(out.verslag).toContain('Studievoortgang');
+});
+
+test('POST /admin/verslag vereist auth', async () => {
+  const res = await fetch(`${base}/admin/verslag`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
+  expect(res.status).toBe(401);
 });
