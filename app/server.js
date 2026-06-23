@@ -375,6 +375,7 @@ async function readRegios() {
       await writeRegios(DEFAULT_REGIOS).catch(() => {});
       return DEFAULT_REGIOS;
     }
+    console.error('[analyse] regios.json corrupt of ongeldig, val terug op defaults:', err.message);
     return DEFAULT_REGIOS;
   }
 }
@@ -400,7 +401,7 @@ async function readAllRooms() {
   const out = [];
   for (const code of dirs) {
     try { out.push({ code, state: JSON.parse(await fs.readFile(path.join(RECAP_DIR, code, 'state.json'), 'utf8')) }); }
-    catch {}
+    catch (err) { console.error('[analyse] kamer overgeslagen:', code, err.code || err.message); }
   }
   return out;
 }
