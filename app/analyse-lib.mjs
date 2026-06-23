@@ -140,3 +140,40 @@ export function aggregate(rooms, regios) {
   };
   return { kpis, insights, useCases };
 }
+
+// Bouwt de Nederlandse instructie voor de Claude-API (één messages.create-call).
+export function buildVerslagPrompt(data) {
+  const { kpis, insights, useCases } = data;
+  const lines = [];
+  lines.push('Je bent beleidsadviseur. Schrijf een bondig managementverslag van maximaal één A4 in het Nederlands, op basis van onderstaande data uit vier regiobijeenkomsten over datagedreven werken in het onderwijs.');
+  lines.push('');
+  lines.push('Structuur: (1) korte inleiding/context, (2) de belangrijkste behoeften en patronen, (3) advies over welke 2 à 3 use cases zich het best lenen voor co-creatie en waarom. Lopende tekst met enkele koppen; geen opsomming van alle ruwe data.');
+  lines.push('');
+  lines.push(`Kerncijfers: ${kpis.regios} regio's, ${kpis.inzichten} inzichten, ${kpis.stemmen} stemmen, ${kpis.deelnemers} deelnemers.`);
+  lines.push('');
+  lines.push('Inzichten (tekst | type | rol | regio | stemmen):');
+  for (const i of insights.slice(0, 30)) lines.push(`- ${i.tekst} | ${i.type} | ${i.rol || '—'} | ${i.regio} | ${i.totaalStemmen}`);
+  lines.push('');
+  lines.push('Use cases (titel | doel | rol | regio | stemmen):');
+  for (const u of useCases.slice(0, 20)) lines.push(`- ${u.tekst} | ${u.doel} | ${u.rol || '—'} | ${u.regio} | ${u.totaalStemmen}`);
+  return lines.join('\n');
+}
+
+// Getemplate feitelijke samenvatting — gebruikt als er geen API-sleutel is of
+// de API-call faalt. Geen narratief, puur de cijfers + top-lijsten.
+export function buildFallbackVerslag(data) {
+  const { kpis, insights, useCases } = data;
+  const topI = insights.slice(0, 8).map(i => `- ${i.tekst} (${i.regio}, ${i.type}, ${i.totaalStemmen} stemmen)`).join('\n');
+  const topU = useCases.slice(0, 8).map(u => `- ${u.tekst} — ${u.doel} (${u.regio}, ${u.totaalStemmen} stemmen)`).join('\n');
+  return [
+    'Samenvatting regio-analyse',
+    '',
+    `${kpis.regios} regio's · ${kpis.inzichten} inzichten · ${kpis.stemmen} stemmen · ${kpis.deelnemers} deelnemers.`,
+    '',
+    'Belangrijkste behoeften:',
+    topI || '- (geen)',
+    '',
+    'Use cases (op prioriteit):',
+    topU || '- (geen)',
+  ].join('\n');
+}

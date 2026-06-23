@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { DEFAULT_REGIOS, validateRegios, canonicalizeRoom, aggregate } from '../analyse-lib.mjs';
+import { DEFAULT_REGIOS, validateRegios, canonicalizeRoom, aggregate, buildVerslagPrompt, buildFallbackVerslag } from '../analyse-lib.mjs';
 
 test('DEFAULT_REGIOS bevat de vier sessiecodes in vaste volgorde', () => {
   expect(DEFAULT_REGIOS).toEqual([
@@ -84,4 +84,20 @@ test('aggregate maakt use cases met inhoud en sorteert op stemmen van het inzich
   expect(useCases[0].totaalStemmen).toBe(7);
   expect(useCases[0].rol).toBe('praktijk');
   expect(useCases[0].regio).toBe('Arnhem');
+});
+
+test('buildVerslagPrompt bevat kerncijfers en top-inzicht', () => {
+  const data = aggregate(fixtureRooms(), DEFAULT_REGIOS);
+  const p = buildVerslagPrompt(data);
+  expect(p).toContain('Studievoortgang');
+  expect(p).toContain('managementverslag');
+  expect(p).toMatch(/3 regio's|2 regio's/);
+});
+
+test('buildFallbackVerslag is feitelijk en bevat herkenbare koppen', () => {
+  const data = aggregate(fixtureRooms(), DEFAULT_REGIOS);
+  const v = buildFallbackVerslag(data);
+  expect(v).toContain('behoeften');
+  expect(v).toContain('stemmen');
+  expect(v).toContain('Studievoortgang');
 });
