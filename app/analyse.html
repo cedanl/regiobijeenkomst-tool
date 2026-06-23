@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="nl"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Regio-analyse · CEDA Regiobijeenkomst</title>
+<style>
+  :root { color-scheme: light; --blue:#2563eb; --orange:#ea580c; --ink:#1a1a1a; --muted:#64748b; --line:#e2e8f0; }
+  * { box-sizing: border-box; }
+  body { font: 15px/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: var(--ink); margin: 0; background:#fff; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 24px; }
+  .topbar { display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap; }
+  h1 { font-size: 22px; margin: 0; }
+  .actions { display:flex; gap:8px; flex-wrap:wrap; }
+  button { font: inherit; padding: 7px 12px; border:1px solid var(--line); border-radius:8px; background:#fff; cursor:pointer; }
+  button.primary { background: var(--blue); color:#fff; border-color: var(--blue); }
+  .filters { display:flex; gap:12px; flex-wrap:wrap; margin: 16px 0 8px; align-items:center; }
+  .filters label { font-size:12px; color:var(--muted); display:flex; gap:6px; align-items:center; }
+  select { font: inherit; padding:5px 8px; border:1px solid var(--line); border-radius:6px; }
+  section { margin: 22px 0; }
+  .sec-label { font-size:11px; text-transform:uppercase; letter-spacing:.6px; color:var(--muted); font-weight:700; margin:0 0 10px; }
+  .kpis { display:flex; gap:22px; flex-wrap:wrap; }
+  .kpi b { font-size:22px; display:block; }
+  .kpi span { font-size:12px; color:var(--muted); }
+  .legend { font-size:11px; color:var(--muted); display:flex; gap:14px; align-items:center; margin:8px 0; }
+  .sw { display:inline-block; width:11px; height:11px; border-radius:3px; vertical-align:-1px; margin-right:4px; }
+  .bubbles { display:flex; flex-wrap:wrap; gap:8px; }
+  .bub { border-radius:10px; color:#fff; padding:8px 10px; display:flex; flex-direction:column; justify-content:space-between; line-height:1.2; overflow:hidden; }
+  .bub small { font-weight:800; font-size:16px; }
+  .bub .rg { font-size:9px; opacity:.9; letter-spacing:.5px; text-transform:uppercase; }
+  .bub.kans { background: var(--blue); } .bub.uitdaging { background: var(--orange); }
+  .cols { display:flex; gap:14px; margin-top:8px; }
+  .col { flex:1; background:#fafafa; border:1px solid var(--line); border-radius:8px; padding:10px; min-width:0; }
+  .col h5 { margin:0 0 8px; font-size:12px; text-transform:uppercase; letter-spacing:.5px; color:#475569; display:flex; justify-content:space-between; }
+  .ci { display:flex; justify-content:space-between; gap:6px; font-size:12px; margin-top:6px; }
+  .ci span:first-child { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .cb { height:8px; border-radius:3px; margin-top:2px; }
+  .cb.kans { background: var(--blue); } .cb.uitdaging { background: var(--orange); }
+  .uc-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(240px,1fr)); gap:10px; }
+  .uc { border:1px solid var(--line); border-radius:10px; padding:10px; position:relative; background:#fff; }
+  .uc.starred { border-color:#f59e0b; box-shadow:0 0 0 2px #fef3c7; }
+  .uc h4 { margin:0 8px 8px 0; font-size:13px; padding-right:42px; }
+  .uc .prio { position:absolute; top:8px; right:8px; background:var(--blue); color:#fff; font-weight:800; font-size:11px; border-radius:999px; padding:2px 8px; }
+  .uc .fld { font-size:11px; margin:3px 0; color:#334155; }
+  .uc .fld b { color:var(--muted); font-weight:700; text-transform:uppercase; letter-spacing:.3px; font-size:9px; display:block; }
+  .uc .meta { margin-top:6px; display:flex; gap:5px; flex-wrap:wrap; align-items:center; }
+  .uc .tag { font-size:9px; padding:1px 6px; border-radius:999px; background:#f1f5f9; color:#475569; font-weight:700; }
+  .uc .rg { font-size:9px; color:var(--muted); }
+  .uc .star { position:absolute; bottom:8px; right:8px; font-size:16px; color:#cbd5e1; cursor:pointer; background:none; border:none; padding:0; line-height:1; }
+  .uc.starred .star { color:#f59e0b; }
+  #verslag-body { border:1px solid var(--line); border-radius:8px; padding:16px; min-height:120px; white-space:pre-wrap; outline:none; }
+  #verslag-body:focus { border-color: var(--blue); }
+  .verslag-meta { font-size:11px; color:var(--muted); margin-top:6px; }
+  .empty { color:var(--muted); font-style:italic; }
+  dialog { border:none; border-radius:12px; padding:0; max-width:560px; width:92vw; box-shadow:0 10px 40px rgba(0,0,0,.2); }
+  dialog::backdrop { background: rgba(0,0,0,.35); }
+  .dlg-head { padding:16px 20px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; }
+  .dlg-body { padding:16px 20px; max-height:60vh; overflow:auto; }
+  .dlg-foot { padding:12px 20px; border-top:1px solid var(--line); display:flex; justify-content:flex-end; gap:8px; }
+  .regio-row { display:flex; gap:8px; align-items:center; margin-bottom:8px; }
+  .regio-row .code { font-family: ui-monospace, Menlo, monospace; width:90px; }
+  .regio-row input.label { flex:1; font: inherit; padding:5px 8px; border:1px solid var(--line); border-radius:6px; }
+  .suggest { margin-top:12px; font-size:12px; color:var(--muted); }
+  .suggest button { font-size:11px; padding:2px 8px; margin:2px 4px 0 0; }
+  @media print {
+    .no-print { display:none !important; }
+    body { font-size: 11px; }
+    .wrap { max-width:none; padding:0; }
+    section { margin: 12px 0; page-break-inside: avoid; }
+    .uc, .col { break-inside: avoid; }
+  }
+</style>
+</head><body>
+<div class="wrap">
+  <header class="topbar">
+    <h1>Regio-analyse <span style="font-weight:400;color:var(--muted);font-size:14px">· kansen, inzichten &amp; use cases</span></h1>
+    <div class="actions no-print">
+      <button id="btn-regios">Regio's beheren</button>
+      <button id="btn-verslag">Verslag genereren</button>
+      <button id="btn-print" class="primary">Opslaan als PDF</button>
+    </div>
+  </header>
+
+  <div class="filters no-print">
+    <label>Regio <select id="f-regio"></select></label>
+    <label>Type <select id="f-type"><option value="alle">alle</option><option value="kans">kans</option><option value="uitdaging">uitdaging</option></select></label>
+    <label>Rol <select id="f-rol"><option value="alle">alle</option><option value="praktijk">praktijk</option><option value="aansturing">aansturing</option><option value="ondersteuning">ondersteuning</option></select></label>
+  </div>
+
+  <section id="kpis"></section>
+
+  <section id="viz1">
+    <div class="sec-label">Kansen &amp; inzichten — naar prioriteit</div>
+    <div class="legend no-print"><span><span class="sw" style="background:var(--blue)"></span>Kans</span><span><span class="sw" style="background:var(--orange)"></span>Uitdaging</span><span style="margin-left:auto">vlakgrootte = aantal stemmen</span></div>
+    <div id="bubbles" class="bubbles"></div>
+    <div class="sec-label" style="margin-top:18px">Uitsplitsing per rol</div>
+    <div id="cols" class="cols"></div>
+  </section>
+
+  <section id="viz2">
+    <div class="sec-label">Use cases — kandidaten voor co-creatie</div>
+    <div id="uc-grid" class="uc-grid"></div>
+  </section>
+
+  <section id="verslag">
+    <div class="sec-label">Verslag (1 A4)</div>
+    <div id="verslag-body" contenteditable="true"></div>
+    <div class="verslag-meta no-print" id="verslag-meta"></div>
+  </section>
+</div>
+
+<dialog id="regio-dialog">
+  <form method="dialog">
+    <div class="dlg-head"><strong>Regio's beheren</strong><button value="cancel" aria-label="Sluiten">✕</button></div>
+    <div class="dlg-body">
+      <div id="regio-rows"></div>
+      <button type="button" id="regio-add">+ Regio toevoegen</button>
+      <div class="suggest" id="regio-suggest"></div>
+    </div>
+    <div class="dlg-foot">
+      <button value="cancel">Annuleren</button>
+      <button type="button" id="regio-save" class="primary">Opslaan</button>
+    </div>
+  </form>
+</dialog>
+
+<script>try { window.__ANALYSE__ = __ANALYSE_JSON__; } catch (e) { window.__ANALYSE__ = null; }</script>
+<script>
+const A = window.__ANALYSE__ || { regios: [], unmappedRooms: [], kpis: {}, insights: [], useCases: [] };
+const filters = { regio: 'alle', type: 'alle', rol: 'alle' };
+const SHORTLIST_KEY = 'ceda-analyse-shortlist';
+const VERSLAG_KEY = 'ceda-analyse-verslag';
+
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+function getShortlist() { try { return new Set(JSON.parse(localStorage.getItem(SHORTLIST_KEY)) || []); } catch { return new Set(); } }
+function setShortlist(set) { localStorage.setItem(SHORTLIST_KEY, JSON.stringify([...set])); }
+function applyFilters(items) {
+  return items.filter(it =>
+    (filters.regio === 'alle' || it.regioCode === filters.regio) &&
+    (filters.type === 'alle' || it.type === filters.type) &&
+    (filters.rol === 'alle' || it.rol === filters.rol));
+}
+
+// --- stubs, ingevuld in latere taken ---
+function renderKpis() {}
+function renderViz1() {}
+function renderViz2() {}
+function renderRegioDialog() {}
+function initRegio() {}
+function initVerslag() {}
+
+function render() { renderKpis(); renderViz1(); renderViz2(); }
+
+function initFilters() {
+  const sel = document.getElementById('f-regio');
+  sel.innerHTML = '<option value="alle">alle</option>' + A.regios.map(r => `<option value="${esc(r.code)}">${esc(r.label)}</option>`).join('');
+  sel.addEventListener('change', e => { filters.regio = e.target.value; render(); });
+  document.getElementById('f-type').addEventListener('change', e => { filters.type = e.target.value; render(); });
+  document.getElementById('f-rol').addEventListener('change', e => { filters.rol = e.target.value; render(); });
+}
+
+document.getElementById('btn-print').addEventListener('click', () => window.print());
+
+initFilters();
+initRegio();
+initVerslag();
+render();
+</script>
+</body></html>
