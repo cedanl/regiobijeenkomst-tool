@@ -191,3 +191,21 @@ test('POST /admin/verslag vereist auth', async () => {
   const res = await fetch(`${base}/admin/verslag`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
   expect(res.status).toBe(401);
 });
+
+test('verslag genereren vult het veld en bewaart lokaal; bewerken persisteert', async ({ page }) => {
+  await page.goto(`${base}/admin/analyse`);
+  await Promise.all([
+    page.waitForResponse(r => r.url().includes('/admin/verslag') && r.request().method() === 'POST' && r.ok()),
+    page.locator('#btn-verslag').click(),
+  ]);
+  const body = page.locator('#verslag-body');
+  await expect(body).toContainText('Studievoortgang');
+  await expect(page.locator('#verslag-meta')).toContainText('samenvatting'); // fallback-melding
+  const stored = await page.evaluate(() => localStorage.getItem('ceda-analyse-verslag'));
+  expect(stored).toContain('Studievoortgang');
+
+  // Bewerken persisteert naar localStorage.
+  await body.click();
+  await page.keyboard.type(' EXTRA');
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('ceda-analyse-verslag'))).toContain('EXTRA');
+});

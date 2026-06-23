@@ -263,7 +263,36 @@ function initRegio() {
     render();
   });
 }
-function initVerslag() {}
+function initVerslag() {
+  const body = document.getElementById('verslag-body');
+  const saved = localStorage.getItem(VERSLAG_KEY);
+  if (saved != null) body.textContent = saved;
+  else body.innerHTML = '<span class="empty">Nog geen verslag. Klik "Verslag genereren".</span>';
+  body.addEventListener('input', () => localStorage.setItem(VERSLAG_KEY, body.innerText));
+  document.getElementById('btn-verslag').addEventListener('click', generateVerslag);
+  updateVerslagMeta();
+}
+function updateVerslagMeta() {
+  const meta = document.getElementById('verslag-meta');
+  if (localStorage.getItem(VERSLAG_KEY) != null) meta.textContent = 'Lokaal bewerkbaar — wijzigingen blijven in je browser bewaard.';
+}
+async function generateVerslag() {
+  const body = document.getElementById('verslag-body');
+  const meta = document.getElementById('verslag-meta');
+  const existing = localStorage.getItem(VERSLAG_KEY);
+  if (existing && existing.trim() && !confirm('Bestaand (bewerkt) verslag overschrijven met een verse versie?')) return;
+  meta.textContent = 'Bezig met genereren…';
+  try {
+    const res = await fetch('/admin/verslag', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    const out = await res.json();
+    if (!out.ok) throw new Error(out.error || 'mislukt');
+    body.textContent = out.verslag;
+    localStorage.setItem(VERSLAG_KEY, out.verslag);
+    meta.textContent = out.fallback ? 'Getemplate samenvatting (geen AI-sleutel ingesteld).' : `Gegenereerd met ${out.model}.`;
+  } catch (e) {
+    meta.textContent = 'Genereren mislukt: ' + e.message;
+  }
+}
 
 function render() { renderKpis(); renderViz1(); renderViz2(); }
 
