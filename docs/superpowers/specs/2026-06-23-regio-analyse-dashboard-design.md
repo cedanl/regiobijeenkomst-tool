@@ -41,10 +41,38 @@ sessiecodes:
 | `PUXD` | Utrecht |
 | `MDRH` | Zwolle |
 
-Mapping als kleine **constante bovenin `server.js`** (geen apart bestand nodig
-voor vier vaste codes). Een kamer die níet in de map staat, krijgt zijn ruwe
-code als label — er verdwijnt nooit data. De map bepaalt óók de
-weergavevolgorde.
+De regio-map is **configureerbaar en bewerkbaar in de admin-UI** (zie
+*Regio-beheer*), niet hardgecodeerd. De vier codes hierboven zijn de **defaults**
+waarmee de config bij eerste gebruik wordt geseed. De map doet bewust dubbel
+werk: hij bepaalt zowel **welke kamers** meedoen in de analyse (curatie —
+`RECAP_DIR` bevat óók losse/ephemere workshopkamers die we níet willen
+meetellen) als hun **regiolabel** en **weergavevolgorde**. Een kamer die niet in
+de map staat, doet niet mee; je voegt 'm toe via de editor.
+
+## Regio-beheer (configureerbaar)
+
+De regio-map wordt opgeslagen als JSON op de recaps-volume
+(`<RECAP_DIR>/regios.json`), zodat hij deploys overleeft. Gedrag:
+
+- **Seeden:** ontbreekt het bestand, dan gebruikt de server de vier ingebakken
+  defaults én schrijft die als startpunt weg. Daarna is dat bestand de bron van
+  waarheid (ook als het minder dan vier regio's bevat).
+- **Lezen:** per request, zodat wijzigingen meteen doorwerken zonder herstart.
+- **Bewerken (admin-UI):** een "Regio's beheren"-paneel op de analyse-pagina
+  toont de huidige map (code → label, op volgorde) met toevoegen / hernoemen /
+  verwijderen. Opslaan gaat via `POST /admin/regios` (zelfde basic-auth); de
+  pagina herlaadt daarna de data.
+- **Validatie:** code moet voldoen aan `ROOM_CODE_RE` (`[A-Z0-9]{3,16}`), label
+  niet-leeg. Dubbele code = label overschrijven (upsert). De server schrijft
+  **atomisch** (temp-bestand + rename) zodat een halve schrijfactie het bestand
+  niet corrumpeert.
+- **Ontdekken:** het paneel toont óók de kamercodes die wél recap-data op schijf
+  hebben maar (nog) niet in de map staan, als suggesties om toe te voegen — zo
+  vind je nieuwe sessies zonder de codes uit het hoofd te kennen.
+
+> Dit is de zwaarste van de overwogen opties; het past in de timebox maar zit aan
+> de bovenkant. Wordt het krap, dan is de *Ontdekken*-suggestielijst het eerste
+> dat kan vervallen (codes handmatig intikken blijft mogelijk).
 
 ## Datapijplijn
 
@@ -77,6 +105,8 @@ clusteren is bewust buiten scope — zie *Buiten scope*.)
   basic-auth (503 als `ADMIN_PASSWORD` ontbreekt) — consistent met `/admin/recaps`.
 - Nieuwe route `POST /admin/verslag` (zelfde basic-auth) die het AI-verslag
   genereert via de Claude API en de tekst teruggeeft als JSON.
+- Nieuwe route `POST /admin/regios` (zelfde basic-auth) die de bewerkte regio-map
+  valideert en atomisch wegschrijft naar `<RECAP_DIR>/regios.json`.
 - Linkje vanaf `/admin/recaps` naar het dashboard.
 - Server leest + aggregeert, serveert dan een **aparte pagina** `app/analyse.html`
   met de data inline ingespoten als JSON (zelfde patroon als de hoofdpagina:
@@ -149,7 +179,12 @@ pagina. De op dat moment actieve filterstand bepaalt wat geëxporteerd wordt.
 - **Verweesde use case** (inzicht verwijderd): tonen onder "onbekend inzicht";
   regio/inhoud komen van de kamer, type/rol/stemmen tonen "—".
 - **Gedeeltelijke deelnemer-saves:** opgevangen door de union-merge.
-- **Onbekende kamercode:** ruwe code als label, niet verbergen.
+- **Kamer niet in de map:** doet niet mee in de analyse (curatie); verschijnt wel
+  als toevoeg-suggestie in het regio-beheer-paneel.
+- **Regio verwijderd terwijl er nog recaps zijn:** die kamer valt simpelweg uit de
+  analyse; de recap-bestanden op schijf blijven onaangeroerd.
+- **`regios.json` ontbreekt of is corrupt:** val terug op de vier defaults (en
+  seed het bestand opnieuw bij ontbreken).
 
 ## Testen
 
@@ -157,7 +192,10 @@ Playwright-test (in lijn met de bestaande preflight): vul een tijdelijke
 `RECAP_DIR` met 2-3 nep-kamers (geldige `ROOM_CODE_RE`) met bekende
 inzichten/stemmen/cases, start de server met `ADMIN_PASSWORD` gezet, doe
 `GET /admin/analyse` met basic-auth en controleer de aggregaten: aantal
-inzichten, totaal stemmen, top-inzicht, en het aantal use-case-kaarten.
+inzichten, totaal stemmen, top-inzicht, en het aantal use-case-kaarten. Voeg een
+kamer toe die níet in de regio-map staat en bevestig dat die wordt uitgesloten
+(curatie); optioneel: `POST /admin/regios` om 'm toe te voegen en bevestig dat hij
+dan wél meetelt.
 
 ## Buiten scope (YAGNI)
 
@@ -170,14 +208,18 @@ inzichten, totaal stemmen, top-inzicht, en het aantal use-case-kaarten.
 
 ## Bestanden die raken
 
-- `app/server.js` — nieuwe routes `/admin/analyse` + `POST /admin/verslag`,
-  helpers (kamers lezen, canoniek maken, aggregeren), regio-map, Claude-API-call,
-  link vanaf `/admin/recaps`.
+- `app/server.js` — nieuwe routes `/admin/analyse` + `POST /admin/verslag` +
+  `POST /admin/regios`, helpers (kamers lezen, canoniek maken, aggregeren,
+  regio-map lezen/seeden/atomisch schrijven), Claude-API-call, link vanaf
+  `/admin/recaps`.
 - `app/analyse.html` — nieuwe pagina (filters, beide visualisaties, 1-A4 verslag,
-  print-CSS).
+  regio-beheer-paneel, print-CSS).
 - `app/package.json` — nieuwe dependency `@anthropic-ai/sdk`.
 - `docker/Caddyfile` — CSP gelijktrekken indien nodig.
-- `tests/` — Playwright-test voor `/admin/analyse`.
+- `tests/` — Playwright-test voor `/admin/analyse` (+ regio-map-curatie).
+
+**Nieuw configbestand:** `<RECAP_DIR>/regios.json` — bewerkbaar via de admin-UI;
+geseed met de vier defaults bij ontbreken.
 
 **Nieuwe env var:** `ANTHROPIC_API_KEY` (Fly-secret) — optioneel; zonder de key
 valt het verslag terug op de getemplate samenvatting.
