@@ -384,8 +384,13 @@ async function readRegios() {
 async function writeRegios(list) {
   await fs.mkdir(RECAP_DIR, { recursive: true });
   const tmp = path.join(RECAP_DIR, `regios.${process.pid}.${Date.now()}.json.tmp`);
-  await fs.writeFile(tmp, JSON.stringify(list, null, 2), 'utf8');
-  await fs.rename(tmp, REGIOS_FILE);
+  try {
+    await fs.writeFile(tmp, JSON.stringify(list, null, 2), 'utf8');
+    await fs.rename(tmp, REGIOS_FILE);
+  } catch (err) {
+    fs.unlink(tmp).catch(() => {}); // best-effort opruimen bij rename-failure
+    throw err;
+  }
 }
 
 // Leest alle kamers met een state.json in als { code, state }.
@@ -424,6 +429,7 @@ app.get('/admin/analyse', requireAdmin, async (req, res) => {
 });
 
 app.post('/admin/regios', requireAdmin, express.json({ limit: '64kb' }), async (req, res) => {
+  if (!recapStorageOk) return res.status(503).json({ ok: false, error: 'storage unavailable' });
   const v = validateRegios(req.body);
   if (!v.ok) return res.status(400).json({ ok: false, error: v.error });
   try {
