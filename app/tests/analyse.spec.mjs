@@ -154,3 +154,23 @@ test('shortlist-ster togglet en wordt in localStorage bewaard', async ({ page })
   await page.reload();
   await expect(page.locator('#uc-grid .uc').first()).toHaveClass(/starred/);
 });
+
+test('regio-beheer: ongemapte kamer toevoegen → na opslaan telt die mee', async ({ page }) => {
+  await page.goto(`${base}/admin/analyse`);
+  await page.locator('#btn-regios').click();
+  // De suggestieknop voor TEST1 verschijnt en voegt een rij toe.
+  await page.locator('#regio-suggest button', { hasText: 'TEST1' }).click();
+  // Vul het label van de nieuwe (laatste) rij.
+  const lastLabel = page.locator('#regio-rows .regio-row').last().locator('input.label');
+  await lastLabel.fill('Testregio');
+  // Opslaan → server schrijft regios.json, pagina herlaadt.
+  await Promise.all([
+    page.waitForResponse(r => r.url().includes('/admin/regios') && r.request().method() === 'POST' && r.ok()),
+    page.locator('#regio-save').click(),
+  ]);
+  await page.waitForLoadState('load');
+  const data = await page.evaluate(() => window.__ANALYSE__);
+  expect(data.regios.map(r => r.code)).toContain('TEST1');
+  expect(data.insights.some(i => i.regioCode === 'TEST1')).toBe(true);
+  expect(data.unmappedRooms).not.toContain('TEST1');
+});

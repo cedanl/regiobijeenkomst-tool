@@ -434,7 +434,11 @@ app.post('/admin/regios', requireAdmin, express.json({ limit: '64kb' }), async (
   if (!v.ok) return res.status(400).json({ ok: false, error: v.error });
   try {
     await writeRegios(v.value);
-    res.json({ ok: true, regios: v.value });
+    const rooms = await readAllRooms();
+    const data = aggregate(rooms, v.value);
+    const mapped = new Set(v.value.map(r => r.code));
+    const unmappedRooms = rooms.map(r => r.code).filter(c => !mapped.has(c)).sort();
+    res.json({ ok: true, regios: v.value, unmappedRooms, ...data });
   } catch (err) {
     console.error('[regios] schrijven faalde', { code: err.code, message: err.message });
     res.status(500).json({ ok: false, error: 'storage failure' });

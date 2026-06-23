@@ -205,8 +205,64 @@ function renderViz2() {
     renderViz2();
   }));
 }
-function renderRegioDialog() {}
-function initRegio() {}
+function regioRowHtml(code, label) {
+  return `<div class="regio-row">
+    <span class="code">${esc(code)}</span>
+    <input type="hidden" class="code-input" value="${esc(code)}">
+    <input class="label" type="text" value="${esc(label)}" placeholder="regionaam">
+    <button type="button" class="rm">verwijder</button>
+  </div>`;
+}
+function bindRegioRows() {
+  document.querySelectorAll('#regio-rows .rm').forEach(btn => {
+    btn.onclick = () => btn.closest('.regio-row').remove();
+  });
+}
+function renderRegioDialog() {
+  const rows = document.getElementById('regio-rows');
+  rows.innerHTML = A.regios.map(r => regioRowHtml(r.code, r.label)).join('');
+  bindRegioRows();
+  const sug = document.getElementById('regio-suggest');
+  if (A.unmappedRooms && A.unmappedRooms.length) {
+    sug.innerHTML = 'Kamers met data, nog niet gekoppeld: ' +
+      A.unmappedRooms.map(c => `<button type="button" data-code="${esc(c)}">${esc(c)}</button>`).join('');
+    sug.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+      rows.insertAdjacentHTML('beforeend', regioRowHtml(b.dataset.code, ''));
+      bindRegioRows();
+      b.remove();
+    }));
+  } else {
+    sug.innerHTML = '';
+  }
+}
+function initRegio() {
+  document.getElementById('btn-regios').addEventListener('click', () => {
+    renderRegioDialog();
+    document.getElementById('regio-dialog').showModal();
+  });
+  document.getElementById('regio-add').addEventListener('click', () => {
+    const code = (prompt('Sessiecode (3-16 tekens, A-Z 0-9):') || '').trim().toUpperCase();
+    if (!code) return;
+    document.getElementById('regio-rows').insertAdjacentHTML('beforeend', regioRowHtml(code, ''));
+    bindRegioRows();
+  });
+  document.getElementById('regio-save').addEventListener('click', async () => {
+    const list = [...document.querySelectorAll('#regio-rows .regio-row')].map(row => ({
+      code: row.querySelector('.code-input').value.trim().toUpperCase(),
+      label: row.querySelector('.label').value.trim(),
+    })).filter(r => r.code && r.label);
+    const res = await fetch('/admin/regios', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(list),
+    });
+    const out = await res.json().catch(() => ({}));
+    if (!res.ok || !out.ok) { alert('Opslaan mislukt: ' + (out.error || res.status)); return; }
+    window.__ANALYSE__ = out;
+    Object.assign(A, out);
+    document.getElementById('regio-dialog').close();
+    initFilters();
+    render();
+  });
+}
 function initVerslag() {}
 
 function render() { renderKpis(); renderViz1(); renderViz2(); }
