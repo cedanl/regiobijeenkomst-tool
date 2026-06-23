@@ -94,3 +94,21 @@ test('GET /admin/recaps linkt naar het dashboard', async () => {
   const html = await res.text();
   expect(html).toContain('/admin/analyse');
 });
+
+test('POST /admin/regios weigert ongeldige invoer met 400', async () => {
+  const res = await fetch(`${base}/admin/regios`, {
+    method: 'POST',
+    headers: { authorization: authHeader, 'content-type': 'application/json' },
+    body: JSON.stringify([{ code: 'ab', label: 'te kort' }]),
+  });
+  expect(res.status).toBe(400);
+  const out = await res.json();
+  expect(out.ok).toBe(false);
+});
+
+test('POST /admin/regios vereist auth', async () => {
+  const res = await fetch(`${base}/admin/regios`, {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: '[]',
+  });
+  expect(res.status).toBe(401);
+});

@@ -423,6 +423,18 @@ app.get('/admin/analyse', requireAdmin, async (req, res) => {
   res.send(html);
 });
 
+app.post('/admin/regios', requireAdmin, express.json({ limit: '64kb' }), async (req, res) => {
+  const v = validateRegios(req.body);
+  if (!v.ok) return res.status(400).json({ ok: false, error: v.error });
+  try {
+    await writeRegios(v.value);
+    res.json({ ok: true, regios: v.value });
+  } catch (err) {
+    console.error('[regios] schrijven faalde', { code: err.code, message: err.message });
+    res.status(500).json({ ok: false, error: 'storage failure' });
+  }
+});
+
 // Default → index
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'ceda-workshop.html'));
