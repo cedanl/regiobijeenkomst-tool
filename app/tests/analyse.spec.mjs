@@ -192,6 +192,16 @@ test('POST /admin/verslag vereist auth', async () => {
   expect(res.status).toBe(401);
 });
 
+test('print-modus verbergt bedieningselementen maar toont de visualisaties', async ({ page }) => {
+  await page.goto(`${base}/admin/analyse`);
+  await page.emulateMedia({ media: 'print' });
+  await expect(page.locator('.filters')).toBeHidden();
+  await expect(page.locator('#btn-print')).toBeHidden();
+  await expect(page.locator('#viz1')).toBeVisible();
+  await expect(page.locator('#viz2')).toBeVisible();
+  await expect(page.locator('#verslag')).toBeVisible();
+});
+
 test('verslag genereren vult het veld en bewaart lokaal; bewerken persisteert', async ({ page }) => {
   await page.goto(`${base}/admin/analyse`);
   await Promise.all([
