@@ -141,8 +141,44 @@ function applyFilters(items) {
 }
 
 // --- stubs, ingevuld in latere taken ---
-function renderKpis() {}
-function renderViz1() {}
+function renderKpis() {
+  const k = A.kpis || {};
+  document.getElementById('kpis').innerHTML = `<div class="kpis">
+    <div class="kpi"><b>${k.regios || 0}</b><span>regio's</span></div>
+    <div class="kpi"><b>${k.inzichten || 0}</b><span>inzichten</span></div>
+    <div class="kpi"><b>${k.stemmen || 0}</b><span>stemmen</span></div>
+    <div class="kpi"><b>${k.deelnemers || 0}</b><span>deelnemers</span></div>
+  </div>`;
+}
+
+function renderViz1() {
+  const items = applyFilters(A.insights);
+  const max = items.reduce((m, i) => Math.max(m, i.totaalStemmen), 0) || 1;
+  const bubbles = document.getElementById('bubbles');
+  if (!items.length) {
+    bubbles.innerHTML = '<p class="empty">Geen inzichten voor deze filters.</p>';
+  } else {
+    bubbles.innerHTML = items.map(i => {
+      const scale = 0.35 + 0.65 * (i.totaalStemmen / max);
+      const w = Math.round(90 + 130 * scale);
+      const h = Math.round(46 + 56 * scale);
+      return `<div class="bub ${i.type}" style="width:${w}px;height:${h}px" title="${esc(i.tekst)}">
+        <span>${esc(i.tekst)}</span>
+        <div><span class="rg">${esc(i.regio)}${i.rol ? ' · ' + esc(i.rol) : ''}</span><br><small>${i.totaalStemmen}</small></div>
+      </div>`;
+    }).join('');
+  }
+  const roles = [['praktijk', 'Praktijk'], ['aansturing', 'Aansturing'], ['ondersteuning', 'Ondersteuning']];
+  document.getElementById('cols').innerHTML = roles.map(([key, label]) => {
+    const col = items.filter(i => i.rol === key);
+    const cmax = col.reduce((m, i) => Math.max(m, i.totaalStemmen), 0) || 1;
+    const sum = col.reduce((s, i) => s + i.totaalStemmen, 0);
+    return `<div class="col"><h5>${label} <span>${sum} st.</span></h5>
+      ${col.length ? col.map(i => `<div class="ci"><span title="${esc(i.tekst)}">${esc(i.tekst)}</span><span>${i.totaalStemmen}</span></div>
+        <div class="cb ${i.type}" style="width:${Math.round(100 * i.totaalStemmen / cmax)}%"></div>`).join('') : '<p class="empty">—</p>'}
+    </div>`;
+  }).join('');
+}
 function renderViz2() {}
 function renderRegioDialog() {}
 function initRegio() {}

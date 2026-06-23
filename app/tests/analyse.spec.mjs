@@ -112,3 +112,23 @@ test('POST /admin/regios vereist auth', async () => {
   });
   expect(res.status).toBe(401);
 });
+
+test('viz1 toont KPI-cijfers en het top-inzicht als grootste blok', async ({ page }) => {
+  await page.goto(`${base}/admin/analyse`);
+  await expect(page.locator('#kpis')).toContainText('inzichten');
+  const bubbles = page.locator('#bubbles .bub');
+  await expect(bubbles).toHaveCount(3);
+  // Top-inzicht (i1, 7 stemmen) staat eerst en is een 'kans' (blauw).
+  await expect(bubbles.first()).toContainText('Studievoortgang');
+  await expect(bubbles.first()).toHaveClass(/kans/);
+  // Rol-kolommen: drie kolommen aanwezig.
+  await expect(page.locator('#cols .col')).toHaveCount(3);
+});
+
+test('viz1 filtert op type', async ({ page }) => {
+  await page.goto(`${base}/admin/analyse`);
+  await page.locator('#f-type').selectOption('uitdaging');
+  const bubbles = page.locator('#bubbles .bub');
+  await expect(bubbles).toHaveCount(1);
+  await expect(bubbles.first()).toContainText('AVG-drempels');
+});
