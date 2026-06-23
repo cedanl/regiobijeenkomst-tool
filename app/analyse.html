@@ -179,7 +179,32 @@ function renderViz1() {
     </div>`;
   }).join('');
 }
-function renderViz2() {}
+function renderViz2() {
+  const items = applyFilters(A.useCases);
+  const star = getShortlist();
+  const grid = document.getElementById('uc-grid');
+  if (!items.length) { grid.innerHTML = '<p class="empty">Geen use cases voor deze filters.</p>'; return; }
+  grid.innerHTML = items.map(u => {
+    const on = star.has(u.insightId);
+    return `<div class="uc${on ? ' starred' : ''}" data-id="${esc(u.insightId)}">
+      <div class="prio">${u.totaalStemmen}</div>
+      <h4>${esc(u.tekst)}</h4>
+      ${u.doel ? `<div class="fld"><b>Doel</b>${esc(u.doel)}</div>` : ''}
+      ${u.actoren ? `<div class="fld"><b>Actoren</b>${esc(u.actoren)}</div>` : ''}
+      ${u.resultaat ? `<div class="fld"><b>Resultaat</b>${esc(u.resultaat)}</div>` : ''}
+      ${u.ai_data ? `<div class="fld"><b>AI &amp; data</b>${esc(u.ai_data)}</div>` : ''}
+      <div class="meta">${u.rol ? `<span class="tag">${esc(u.rol)}</span>` : ''}<span class="rg">${esc(u.regio)}</span></div>
+      <button class="star no-print" title="Markeer als co-creatie-kandidaat">${on ? '★' : '☆'}</button>
+    </div>`;
+  }).join('');
+  grid.querySelectorAll('.star').forEach(btn => btn.addEventListener('click', () => {
+    const id = btn.closest('.uc').dataset.id;
+    const s = getShortlist();
+    if (s.has(id)) s.delete(id); else s.add(id);
+    setShortlist(s);
+    renderViz2();
+  }));
+}
 function renderRegioDialog() {}
 function initRegio() {}
 function initVerslag() {}

@@ -132,3 +132,25 @@ test('viz1 filtert op type', async ({ page }) => {
   await expect(bubbles).toHaveCount(1);
   await expect(bubbles.first()).toContainText('AVG-drempels');
 });
+
+test('viz2 toont use-case-kaarten gesorteerd op prioriteit', async ({ page }) => {
+  await page.goto(`${base}/admin/analyse`);
+  const cards = page.locator('#uc-grid .uc');
+  await expect(cards).toHaveCount(2);
+  await expect(cards.first()).toContainText('Studievoortgang');
+  await expect(cards.first().locator('.prio')).toHaveText('7');
+  await expect(cards.first()).toContainText('Eerder ingrijpen');
+});
+
+test('shortlist-ster togglet en wordt in localStorage bewaard', async ({ page }) => {
+  await page.goto(`${base}/admin/analyse`);
+  const first = page.locator('#uc-grid .uc').first();
+  await expect(first).not.toHaveClass(/starred/);
+  await first.locator('.star').click();
+  await expect(first).toHaveClass(/starred/);
+  const stored = await page.evaluate(() => localStorage.getItem('ceda-analyse-shortlist'));
+  expect(JSON.parse(stored)).toContain('i1');
+  // Blijft na herladen.
+  await page.reload();
+  await expect(page.locator('#uc-grid .uc').first()).toHaveClass(/starred/);
+});
