@@ -101,3 +101,23 @@ test('buildFallbackVerslag is feitelijk en bevat herkenbare koppen', () => {
   expect(v).toContain('stemmen');
   expect(v).toContain('Studievoortgang');
 });
+
+test('aggregate slaat cases zonder inhoud over (lege/whitespace velden)', () => {
+  const rooms = [{ code: 'HRQT', state: { participants: {
+    u1: { state: { insights: [{ id: 'i1', type: 'kans', text: 'X', role: 'praktijk', votes: { u1: 1 } }], cases: { i1: { doel: '   ', actoren: '', resultaat: '', ai_data: '', _ts_doel: 5 } } } },
+  } } }];
+  const { useCases } = aggregate(rooms, DEFAULT_REGIOS);
+  expect(useCases).toEqual([]); // case heeft geen inhoud → niet meegenomen
+});
+
+test('aggregate toont een weescase (zonder bijbehorend inzicht) als onbekend inzicht', () => {
+  const rooms = [{ code: 'HRQT', state: { participants: {
+    u1: { state: { insights: [], cases: { ghost: { doel: 'Verweesd doel', _ts_doel: 5 } } } },
+  } } }];
+  const { useCases } = aggregate(rooms, DEFAULT_REGIOS);
+  expect(useCases).toHaveLength(1);
+  expect(useCases[0].tekst).toBe('(onbekend inzicht)');
+  expect(useCases[0].type).toBeNull();
+  expect(useCases[0].rol).toBeNull();
+  expect(useCases[0].totaalStemmen).toBe(0);
+});
