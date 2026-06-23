@@ -1,0 +1,149 @@
+# Regio-analyse & presentatie-dashboard — Design
+
+**Datum:** 2026-06-23
+**Status:** Ontwerp ter review
+**Appetite:** Medium (3-4 dagen)
+
+## Doel & context
+
+In vier regiobijeenkomsten (Arnhem, Breda, Utrecht, Zwolle) zijn tientallen
+kansen en uitdagingen opgehaald rond datagedreven werken in het onderwijs, met
+stemmen/prioritering, en daaruit zijn zo'n 15 use cases uitgewerkt. Die oogst
+zit nu versnipperd in vier losse `state.json`-recaps. We willen die eenduidig en
+overzichtelijk terugpresenteren aan onderwijsinstellingen, zodat we samen 2 à 3
+use cases kunnen kiezen om in co-creatie uit te werken.
+
+De oplossing: één analyse-/presentatiepagina met **twee datavisualisaties**:
+
+1. **Kansen & inzichten** met stemmen/prioriteit — "welke behoeften leven er?"
+2. **Use cases** — overzicht om in gesprek de co-creatie-kandidaten te kiezen.
+
+## Gebruik
+
+- **Live** op scherm tijdens het gesprek met een instelling (interactief: filteren).
+- **Export** als PDF voor in een deck of mail — via print-stylesheet + "Opslaan als PDF".
+
+Eén pagina dekt beide: de live filterstand "bevriest" simpelweg in de PDF.
+
+## Databron & regio-mapping
+
+Bron = de gemergede recap-`state.json` per kamer in `RECAP_DIR` (productie:
+`/data/recaps`), dezelfde bestanden die `/admin/recaps` toont. De vier relevante
+sessiecodes:
+
+| `roomCode` | Regio |
+|---|---|
+| `HRQT` | Arnhem |
+| `WTEL` | Breda |
+| `PUXD` | Utrecht |
+| `MDRH` | Zwolle |
+
+Mapping als kleine **constante bovenin `server.js`** (geen apart bestand nodig
+voor vier vaste codes). Een kamer die níet in de map staat, krijgt zijn ruwe
+code als label — er verdwijnt nooit data. De map bepaalt óók de
+weergavevolgorde.
+
+## Datapijplijn
+
+**Per kamer → canonieke staat.** `state.json` bevat `participants{userId:
+{savedAt, state}}`. Omdat de sync convergeert zijn de snapshots grotendeels
+gelijk, maar we mergen defensief zodat een gedeeltelijke save niets sloopt:
+- `insights[]`: union op `id` over alle deelnemers; per inzicht de `votes{}`
+  samenvoegen (per `userId` de hoogste count).
+- `cases{}`: union op `insightId`; bij conflict de meest recente (`_ts`).
+- De **regio** van álle items uit een kamer = de regio van die kamer (niet
+  afgeleid uit het inzicht zelf).
+
+**Over regio's heen → twee datasets.** "Samenvoegen" = **poolen** van alle
+regio's in één overzicht; géén tekst-dedup. Identieke behoeften in andere
+woorden blijven dus aparte items, elk met hun eigen regio-label. (Semantisch
+clusteren is bewust buiten scope — zie *Buiten scope*.)
+
+- **Viz 1 (inzichten):** lijst van inzichten met
+  `{ id, type, rol, tekst, regio, totaalStemmen, aantalStemmers }`.
+  `totaalStemmen` = som van `votes{}`-waarden; `aantalStemmers` = aantal
+  `userId`'s in `votes{}`.
+- **Viz 2 (use cases):** lijst van `cases` gekoppeld aan hun inzicht →
+  `{ insightId, doel, actoren, resultaat, ai_data, type, rol, regio, totaalStemmen }`.
+  Een use case erft type/rol/stemmen van het bijbehorende inzicht; de regio komt
+  van de kamer.
+
+## Route & beveiliging
+
+- Nieuwe route `GET /admin/analyse`, achter de bestaande `requireAdmin`
+  basic-auth (503 als `ADMIN_PASSWORD` ontbreekt) — consistent met `/admin/recaps`.
+- Linkje vanaf `/admin/recaps` naar het dashboard.
+- Server leest + aggregeert, serveert dan een **aparte pagina** `app/analyse.html`
+  met de data inline ingespoten als JSON (zelfde patroon als de hoofdpagina:
+  inline `<script>`/`<style>`). Houdt `server.js` slank en de pagina onderhoudbaar.
+- CSP moet de inline JS/CSS van deze pagina toestaan (hergebruik het beleid van de
+  hoofdpagina). CSP staat in **zowel** `server.js` als `docker/Caddyfile` — beide
+  bijwerken indien nodig.
+
+## Visualisatie 1 — Kansen & inzichten (treemap + rol-kolommen)
+
+Eén pagina-sectie, twee onderdelen op dezelfde filters:
+
+- **Overzicht (treemap-achtig):** alle inzichten als blokken, **grootte ∝
+  stemmen**, **kleur = type** (kans = blauw, uitdaging = oranje), met regio- en
+  rol-label per blok. In pure HTML/CSS wordt dit een **flex-grid van blokken met
+  grootte naar stemmen** (geen echte squarified treemap — geen lib, blijft binnen
+  de timebox; vlakverhoudingen zijn benaderend).
+- **Uitsplitsing per rol:** drie kolommen (praktijk / aansturing / ondersteuning),
+  elk gerangschikt op stemmen, met staafjes.
+- **KPI-koptekst:** #regio's, #inzichten, #stemmen, #deelnemers.
+
+## Visualisatie 2 — Use cases (kaartraster + shortlist)
+
+- **Kaartraster:** één kaart per use case met doel / actoren / resultaat /
+  AI&data, plus regio-label, rol-tag en prioriteit (stemmen) als badge.
+- **Sortering:** op prioriteit (stemmen) aflopend.
+- **Shortlist-markering (★):** klik markeert een kaart als co-creatie-kandidaat,
+  handig om live samen 2-3 te kiezen. Opgeslagen in **localStorage** van de
+  admin-pagina (blijft lokaal in de browser; raakt de gedeelde recap-data niet).
+
+## Filters
+
+Eén filterbalk bovenaan stuurt **beide** visualisaties: **regio** (incl. "alle"),
+**type** (kans/uitdaging), **rol** (praktijk/aansturing/ondersteuning). Use cases
+erven type/rol van hun inzicht, dus dezelfde filters werken daar ook.
+
+## Export (print → PDF)
+
+Knop "Opslaan als PDF" roept `window.print()` aan. Een print-stylesheet verbergt
+de filterbalk/knoppen en zet beide visualisaties netjes onder elkaar op de
+pagina. De op dat moment actieve filterstand bepaalt wat geëxporteerd wordt.
+
+## Randgevallen
+
+- **Geen/lege data of geen recap-storage:** nette lege staat ("nog geen recaps").
+- **Inzicht met 0 stemmen:** wordt getoond (kleinste blok / onderaan kolom).
+- **Verweesde use case** (inzicht verwijderd): tonen onder "onbekend inzicht";
+  regio/inhoud komen van de kamer, type/rol/stemmen tonen "—".
+- **Gedeeltelijke deelnemer-saves:** opgevangen door de union-merge.
+- **Onbekende kamercode:** ruwe code als label, niet verbergen.
+
+## Testen
+
+Playwright-test (in lijn met de bestaande preflight): vul een tijdelijke
+`RECAP_DIR` met 2-3 nep-kamers (geldige `ROOM_CODE_RE`) met bekende
+inzichten/stemmen/cases, start de server met `ADMIN_PASSWORD` gezet, doe
+`GET /admin/analyse` met basic-auth en controleer de aggregaten: aantal
+inzichten, totaal stemmen, top-inzicht, en het aantal use-case-kaarten.
+
+## Buiten scope (YAGNI)
+
+- Semantisch/AI-clusteren van vergelijkbare inzichten (de gekozen aanpak is
+  "groeperen op bestaande velden").
+- Handmatige redactie/samenvoegen van inzichten in de tool.
+- Prioriteringsmatrix met haalbaarheid-as (vereist handmatig scoren — niet in data).
+- Echte squarified treemap / charting-library (CSP + build-stap).
+- Persistente shortlist gedeeld tussen gebruikers (blijft localStorage).
+
+## Bestanden die raken
+
+- `app/server.js` — nieuwe route `/admin/analyse`, helpers (kamers lezen,
+  canoniek maken, aggregeren), regio-map, link vanaf `/admin/recaps`.
+- `app/analyse.html` — nieuwe pagina (filters, beide visualisaties, print-CSS).
+- `docker/Caddyfile` — CSP gelijktrekken indien nodig.
+- `tests/` — Playwright-test voor `/admin/analyse`.
