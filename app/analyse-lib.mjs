@@ -66,3 +66,77 @@ export function canonicalizeRoom(state) {
   }
   return { insights: [...insightsById.values()], cases: casesById };
 }
+
+const CASE_FIELDS = ['doel', 'actoren', 'resultaat', 'ai_data'];
+
+function voteTotal(votes) {
+  if (!votes || typeof votes !== 'object') return 0;
+  return Object.values(votes).reduce((s, n) => s + (n || 0), 0);
+}
+function voterCount(votes) {
+  if (!votes || typeof votes !== 'object') return 0;
+  return Object.keys(votes).filter(uid => (votes[uid] || 0) > 0).length;
+}
+function normType(t) { return t === 'uitdaging' ? 'uitdaging' : 'kans'; }
+
+// rooms: [{ code, state }]. regios: [{ code, label }] (volgorde = weergavevolgorde).
+// Alleen kamers met een code in regios doen mee (curatie).
+export function aggregate(rooms, regios) {
+  const order = new Map(regios.map((r, i) => [r.code, { label: r.label, i }]));
+  const insights = [];
+  const useCases = [];
+  let deelnemers = 0;
+  const regiosMetData = new Set();
+
+  const mapped = rooms.filter(r => order.has(r.code))
+    .sort((a, b) => order.get(a.code).i - order.get(b.code).i);
+
+  for (const room of mapped) {
+    const regioLabel = order.get(room.code).label;
+    const { insights: roomInsights, cases } = canonicalizeRoom(room.state);
+    deelnemers += Object.keys((room.state && room.state.participants) || {}).length;
+    if (roomInsights.length || cases.size) regiosMetData.add(room.code);
+
+    const byId = new Map(roomInsights.map(i => [i.id, i]));
+    for (const ins of roomInsights) {
+      insights.push({
+        id: ins.id,
+        type: normType(ins.type),
+        rol: ins.role || null,
+        tekst: ins.text || '',
+        regio: regioLabel,
+        regioCode: room.code,
+        totaalStemmen: voteTotal(ins.votes),
+        aantalStemmers: voterCount(ins.votes),
+      });
+    }
+    for (const [insightId, c] of cases) {
+      if (!CASE_FIELDS.some(f => String(c[f] || '').trim())) continue; // sla lege cases over
+      const ins = byId.get(insightId) || null;
+      useCases.push({
+        insightId,
+        tekst: ins ? (ins.text || '') : '(onbekend inzicht)',
+        doel: c.doel || '',
+        actoren: c.actoren || '',
+        resultaat: c.resultaat || '',
+        ai_data: c.ai_data || '',
+        type: ins ? normType(ins.type) : null,
+        rol: ins ? (ins.role || null) : null,
+        regio: regioLabel,
+        regioCode: room.code,
+        totaalStemmen: ins ? voteTotal(ins.votes) : 0,
+      });
+    }
+  }
+
+  insights.sort((a, b) => b.totaalStemmen - a.totaalStemmen);
+  useCases.sort((a, b) => b.totaalStemmen - a.totaalStemmen);
+
+  const kpis = {
+    regios: regiosMetData.size,
+    inzichten: insights.length,
+    stemmen: insights.reduce((s, i) => s + i.totaalStemmen, 0),
+    deelnemers,
+  };
+  return { kpis, insights, useCases };
+}

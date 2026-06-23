@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { DEFAULT_REGIOS, validateRegios, canonicalizeRoom } from '../analyse-lib.mjs';
+import { DEFAULT_REGIOS, validateRegios, canonicalizeRoom, aggregate } from '../analyse-lib.mjs';
 
 test('DEFAULT_REGIOS bevat de vier sessiecodes in vaste volgorde', () => {
   expect(DEFAULT_REGIOS).toEqual([
@@ -46,4 +46,42 @@ test('canonicalizeRoom unioniseert inzichten en neemt per stemmer de hoogste ste
 test('canonicalizeRoom is bestand tegen ontbrekende velden', () => {
   expect(canonicalizeRoom({}).insights).toEqual([]);
   expect(canonicalizeRoom({ participants: { u: { state: {} } } }).cases.size).toBe(0);
+});
+
+function fixtureRooms() {
+  return [
+    { code: 'HRQT', state: { participants: {
+      u1: { state: { insights: [{ id: 'i1', type: 'kans', text: 'Studievoortgang', role: 'praktijk', votes: { u1: 3 } }], cases: { i1: { doel: 'Eerder ingrijpen', actoren: 'SLB', resultaat: 'minder uitval', ai_data: 'LMS', _ts_doel: 100 } } } },
+      u2: { state: { insights: [
+        { id: 'i1', type: 'kans', text: 'Studievoortgang', role: 'praktijk', votes: { u1: 2, u2: 4 } },
+        { id: 'i2', type: 'uitdaging', text: 'AVG-drempels', role: 'aansturing', votes: { u2: 1 } },
+      ], cases: {} } },
+    } } },
+    { code: 'WTEL', state: { participants: {
+      u3: { state: { insights: [{ id: 'i3', type: 'kans', text: 'Datageletterdheid', role: 'praktijk', votes: { u3: 5 } }], cases: { i3: { doel: 'Docenten data laten duiden', ai_data: 'training', _ts_doel: 50 } } } },
+    } } },
+    { code: 'TEST1', state: { participants: { u9: { state: { insights: [{ id: 'x1', type: 'kans', text: 'NIET MEETELLEN', role: 'praktijk', votes: { u9: 9 } }], cases: {} } } } } },
+  ];
+}
+
+test('aggregate poolt alleen gemapte kamers en sorteert op stemmen', () => {
+  const { kpis, insights, useCases } = aggregate(fixtureRooms(), DEFAULT_REGIOS);
+  // TEST1 zit niet in DEFAULT_REGIOS → uitgesloten (curatie)
+  expect(insights.find(i => i.tekst === 'NIET MEETELLEN')).toBeUndefined();
+  expect(insights.map(i => i.id)).toEqual(['i1', 'i3', 'i2']); // 7, 5, 1
+  const i1 = insights[0];
+  expect(i1.totaalStemmen).toBe(7);
+  expect(i1.aantalStemmers).toBe(2);
+  expect(i1.regio).toBe('Arnhem');
+  expect(i1.regioCode).toBe('HRQT');
+  expect(kpis).toEqual({ regios: 2, inzichten: 3, stemmen: 13, deelnemers: 3 });
+});
+
+test('aggregate maakt use cases met inhoud en sorteert op stemmen van het inzicht', () => {
+  const { useCases } = aggregate(fixtureRooms(), DEFAULT_REGIOS);
+  expect(useCases.map(u => u.insightId)).toEqual(['i1', 'i3']); // i2 heeft geen case
+  expect(useCases[0].doel).toBe('Eerder ingrijpen');
+  expect(useCases[0].totaalStemmen).toBe(7);
+  expect(useCases[0].rol).toBe('praktijk');
+  expect(useCases[0].regio).toBe('Arnhem');
 });
