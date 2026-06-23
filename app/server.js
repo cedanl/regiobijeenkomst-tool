@@ -8,6 +8,8 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import { DEFAULT_REGIOS, validateRegios, aggregate, buildVerslagPrompt, buildFallbackVerslag } from './analyse-lib.mjs';
+import Anthropic from '@anthropic-ai/sdk';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3000;
@@ -17,6 +19,7 @@ const ROOM_CODE_RE = /^[A-Z0-9]{3,16}$/;
 const USER_ID_RE = /^[A-Za-z0-9_-]{3,40}$/;
 const ADMIN_USER = process.env.ADMIN_USER || 'ceda';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
 
 // ISO 8601 timestamp in Europe/Amsterdam (bv. "2026-05-27T15:23:45+02:00").
 // Houdt DST automatisch goed via Intl; blijft parseable door `new Date(...)`.
@@ -306,7 +309,7 @@ app.get('/admin/recaps', requireAdmin, async (req, res) => {
 </style>
 </head><body>
 <h1>Recaps · CEDA Regiobijeenkomst</h1>
-<p class="lede">Per bijeenkomst (sessiecode) één samengevoegd bestand met alle deelnemers. Oudere bijeenkomsten kunnen nog per-deelnemer-bestanden bevatten — die staan onder "legacy".</p>
+<p class="lede">Per bijeenkomst (sessiecode) één samengevoegd bestand met alle deelnemers. Oudere bijeenkomsten kunnen nog per-deelnemer-bestanden bevatten — die staan onder "legacy". → <a href="/admin/analyse">Naar het analyse-dashboard</a></p>
 ${sections.length === 0
   ? `<p class="empty">Nog geen recaps opgeslagen.</p>`
   : sections.map(s => `
@@ -356,6 +359,119 @@ app.get('/admin/recaps/:room/:file', requireAdmin, async (req, res) => {
   } catch (err) {
     if (err.code === 'ENOENT') return res.status(404).send('not found');
     throw err;
+  }
+});
+
+// ---- Regio-map (configureerbaar) ----
+const REGIOS_FILE = path.join(RECAP_DIR, 'regios.json');
+
+// Leest de regio-map. Ontbreekt het bestand → seed met defaults. Corrupt/leeg
+// → defaults (zonder de slechte file te overschrijven). Anders: file is leidend.
+async function readRegios() {
+  try {
+    const parsed = JSON.parse(await fs.readFile(REGIOS_FILE, 'utf8'));
+    const v = validateRegios(parsed);
+    return (v.ok && v.value.length) ? v.value : DEFAULT_REGIOS;
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      await writeRegios(DEFAULT_REGIOS).catch(() => {});
+      return DEFAULT_REGIOS;
+    }
+    console.error('[analyse] regios.json corrupt of ongeldig, val terug op defaults:', err.message);
+    return DEFAULT_REGIOS;
+  }
+}
+
+// Atomisch wegschrijven (tmp + rename), net als /api/recap.
+async function writeRegios(list) {
+  await fs.mkdir(RECAP_DIR, { recursive: true });
+  const tmp = path.join(RECAP_DIR, `regios.${process.pid}.${Date.now()}.json.tmp`);
+  try {
+    await fs.writeFile(tmp, JSON.stringify(list, null, 2), 'utf8');
+    await fs.rename(tmp, REGIOS_FILE);
+  } catch (err) {
+    fs.unlink(tmp).catch(() => {}); // best-effort opruimen bij rename-failure
+    throw err;
+  }
+}
+
+// Leest alle kamers met een state.json in als { code, state }.
+async function readAllRooms() {
+  let dirs = [];
+  try {
+    dirs = (await fs.readdir(RECAP_DIR, { withFileTypes: true }))
+      .filter(d => d.isDirectory() && ROOM_CODE_RE.test(d.name))
+      .map(d => d.name);
+  } catch (err) {
+    if (err.code !== 'ENOENT') throw err;
+  }
+  const out = [];
+  for (const code of dirs) {
+    try { out.push({ code, state: JSON.parse(await fs.readFile(path.join(RECAP_DIR, code, 'state.json'), 'utf8')) }); }
+    catch (err) { console.error('[analyse] kamer overgeslagen:', code, err.code || err.message); }
+  }
+  return out;
+}
+
+app.get('/admin/analyse', requireAdmin, async (req, res) => {
+  const regios = await readRegios();
+  const rooms = await readAllRooms();
+  const data = aggregate(rooms, regios);
+  const mapped = new Set(regios.map(r => r.code));
+  const unmappedRooms = rooms.map(r => r.code).filter(c => !mapped.has(c)).sort();
+  const payload = { regios, unmappedRooms, ...data };
+  // < escapen zodat inzicht-tekst geen </script> kan injecteren; functie-vorm
+  // van replace zodat $-tekens in de JSON niet als vervangpatroon gelden.
+  const json = JSON.stringify(payload).replace(/</g, '\\u003c');
+  let html = await fs.readFile(path.join(__dirname, 'analyse.html'), 'utf8');
+  html = html.replace('__ANALYSE_JSON__', () => json);
+  res.set('Content-Type', 'text/html; charset=utf-8');
+  res.set('Cache-Control', 'no-store');
+  res.send(html);
+});
+
+app.post('/admin/regios', requireAdmin, express.json({ limit: '64kb' }), async (req, res) => {
+  if (!recapStorageOk) return res.status(503).json({ ok: false, error: 'storage unavailable' });
+  const v = validateRegios(req.body);
+  if (!v.ok) return res.status(400).json({ ok: false, error: v.error });
+  try {
+    await writeRegios(v.value);
+    const rooms = await readAllRooms();
+    const data = aggregate(rooms, v.value);
+    const mapped = new Set(v.value.map(r => r.code));
+    const unmappedRooms = rooms.map(r => r.code).filter(c => !mapped.has(c)).sort();
+    res.json({ ok: true, regios: v.value, unmappedRooms, ...data });
+  } catch (err) {
+    console.error('[regios] schrijven faalde', { code: err.code, message: err.message });
+    res.status(500).json({ ok: false, error: 'storage failure' });
+  }
+});
+
+app.post('/admin/verslag', requireAdmin, express.json({ limit: '64kb' }), async (req, res) => {
+  let data;
+  try {
+    data = aggregate(await readAllRooms(), await readRegios());
+  } catch (err) {
+    console.error('[verslag] aggregatie faalde', { code: err.code, message: err.message });
+    return res.status(500).json({ ok: false, error: 'aggregatie faalde' });
+  }
+  // Geen sleutel → meteen de feitelijke samenvatting. Dashboard blijft bruikbaar.
+  if (!ANTHROPIC_API_KEY) {
+    return res.json({ ok: true, fallback: true, verslag: buildFallbackVerslag(data) });
+  }
+  try {
+    const client = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
+    const msg = await client.messages.create({
+      model: 'claude-opus-4-8',
+      max_tokens: 4000,
+      thinking: { type: 'adaptive' },
+      messages: [{ role: 'user', content: buildVerslagPrompt(data) }],
+    });
+    const text = msg.content.filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
+    res.json({ ok: true, fallback: false, model: 'claude-opus-4-8', verslag: text || buildFallbackVerslag(data) });
+  } catch (err) {
+    console.error('[verslag] Claude-call faalde — fallback', { message: err.message });
+    res.json({ ok: true, fallback: true, error: 'ai_failed', verslag: buildFallbackVerslag(data) });
   }
 });
 
