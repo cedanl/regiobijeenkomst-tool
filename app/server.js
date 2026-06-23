@@ -8,6 +8,7 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import { DEFAULT_REGIOS, validateRegios, aggregate } from './analyse-lib.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3000;
@@ -306,7 +307,7 @@ app.get('/admin/recaps', requireAdmin, async (req, res) => {
 </style>
 </head><body>
 <h1>Recaps · CEDA Regiobijeenkomst</h1>
-<p class="lede">Per bijeenkomst (sessiecode) één samengevoegd bestand met alle deelnemers. Oudere bijeenkomsten kunnen nog per-deelnemer-bestanden bevatten — die staan onder "legacy".</p>
+<p class="lede">Per bijeenkomst (sessiecode) één samengevoegd bestand met alle deelnemers. Oudere bijeenkomsten kunnen nog per-deelnemer-bestanden bevatten — die staan onder "legacy". → <a href="/admin/analyse">Naar het analyse-dashboard</a></p>
 ${sections.length === 0
   ? `<p class="empty">Nog geen recaps opgeslagen.</p>`
   : sections.map(s => `
@@ -357,6 +358,68 @@ app.get('/admin/recaps/:room/:file', requireAdmin, async (req, res) => {
     if (err.code === 'ENOENT') return res.status(404).send('not found');
     throw err;
   }
+});
+
+// ---- Regio-map (configureerbaar) ----
+const REGIOS_FILE = path.join(RECAP_DIR, 'regios.json');
+
+// Leest de regio-map. Ontbreekt het bestand → seed met defaults. Corrupt/leeg
+// → defaults (zonder de slechte file te overschrijven). Anders: file is leidend.
+async function readRegios() {
+  try {
+    const parsed = JSON.parse(await fs.readFile(REGIOS_FILE, 'utf8'));
+    const v = validateRegios(parsed);
+    return (v.ok && v.value.length) ? v.value : DEFAULT_REGIOS;
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      await writeRegios(DEFAULT_REGIOS).catch(() => {});
+      return DEFAULT_REGIOS;
+    }
+    return DEFAULT_REGIOS;
+  }
+}
+
+// Atomisch wegschrijven (tmp + rename), net als /api/recap.
+async function writeRegios(list) {
+  await fs.mkdir(RECAP_DIR, { recursive: true });
+  const tmp = path.join(RECAP_DIR, `regios.${process.pid}.${Date.now()}.json.tmp`);
+  await fs.writeFile(tmp, JSON.stringify(list, null, 2), 'utf8');
+  await fs.rename(tmp, REGIOS_FILE);
+}
+
+// Leest alle kamers met een state.json in als { code, state }.
+async function readAllRooms() {
+  let dirs = [];
+  try {
+    dirs = (await fs.readdir(RECAP_DIR, { withFileTypes: true }))
+      .filter(d => d.isDirectory() && ROOM_CODE_RE.test(d.name))
+      .map(d => d.name);
+  } catch (err) {
+    if (err.code !== 'ENOENT') throw err;
+  }
+  const out = [];
+  for (const code of dirs) {
+    try { out.push({ code, state: JSON.parse(await fs.readFile(path.join(RECAP_DIR, code, 'state.json'), 'utf8')) }); }
+    catch {}
+  }
+  return out;
+}
+
+app.get('/admin/analyse', requireAdmin, async (req, res) => {
+  const regios = await readRegios();
+  const rooms = await readAllRooms();
+  const data = aggregate(rooms, regios);
+  const mapped = new Set(regios.map(r => r.code));
+  const unmappedRooms = rooms.map(r => r.code).filter(c => !mapped.has(c)).sort();
+  const payload = { regios, unmappedRooms, ...data };
+  // < escapen zodat inzicht-tekst geen </script> kan injecteren; functie-vorm
+  // van replace zodat $-tekens in de JSON niet als vervangpatroon gelden.
+  const json = JSON.stringify(payload).replace(/</g, '\\u003c');
+  let html = await fs.readFile(path.join(__dirname, 'analyse.html'), 'utf8');
+  html = html.replace('__ANALYSE_JSON__', () => json);
+  res.set('Content-Type', 'text/html; charset=utf-8');
+  res.set('Cache-Control', 'no-store');
+  res.send(html);
 });
 
 // Default → index
