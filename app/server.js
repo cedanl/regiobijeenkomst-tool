@@ -463,7 +463,7 @@ app.post('/admin/verslag', requireAdmin, express.json({ limit: '64kb' }), async 
     const client = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
     const msg = await client.messages.create({
       model: 'claude-opus-4-8',
-      max_tokens: 4000,
+      max_tokens: 8000,
       thinking: { type: 'adaptive' },
       messages: [{ role: 'user', content: buildVerslagPrompt(data) }],
     });

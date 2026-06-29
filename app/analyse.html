@@ -47,8 +47,16 @@
   .uc .rg { font-size:9px; color:var(--muted); }
   .uc .star { position:absolute; bottom:8px; right:8px; font-size:16px; color:#cbd5e1; cursor:pointer; background:none; border:none; padding:0; line-height:1; }
   .uc.starred .star { color:#f59e0b; }
-  #verslag-body { border:1px solid var(--line); border-radius:8px; padding:16px; min-height:120px; white-space:pre-wrap; outline:none; }
-  #verslag-body:focus { border-color: var(--blue); }
+  #verslag-view { border:1px solid var(--line); border-radius:8px; padding:16px 20px; min-height:120px; line-height:1.55; }
+  #verslag-view h1 { font-size:19px; margin:0 0 10px; }
+  #verslag-view h2 { font-size:16px; margin:18px 0 8px; }
+  #verslag-view h3, #verslag-view h4 { font-size:13px; margin:14px 0 6px; }
+  #verslag-view p { margin:0 0 10px; }
+  #verslag-view ul, #verslag-view ol { margin:0 0 10px; padding-left:22px; }
+  #verslag-view li { margin:2px 0; }
+  #verslag-view code { background:#f1f5f9; padding:1px 4px; border-radius:4px; font-size:.92em; }
+  #verslag-edit { width:100%; box-sizing:border-box; min-height:340px; border:1px solid var(--blue); border-radius:8px; padding:16px; font:13px/1.5 ui-monospace, Menlo, monospace; resize:vertical; outline:none; }
+  #btn-verslag-edit { font-size:11px; padding:2px 10px; font-weight:600; }
   .verslag-meta { font-size:11px; color:var(--muted); margin-top:6px; }
   .empty { color:var(--muted); font-style:italic; }
   dialog { border:none; border-radius:12px; padding:0; max-width:560px; width:92vw; box-shadow:0 10px 40px rgba(0,0,0,.2); }
@@ -67,6 +75,8 @@
     .wrap { max-width:none; padding:0; }
     section { margin: 12px 0; page-break-inside: avoid; }
     .uc, .col { break-inside: avoid; }
+    /* Het verslag mag lang zijn → laat het over pagina's heen breken i.p.v. afkappen. */
+    #verslag { page-break-inside: auto; break-inside: auto; }
   }
 </style>
 </head><body>
@@ -102,8 +112,12 @@
   </section>
 
   <section id="verslag">
-    <div class="sec-label">Verslag (1 A4)</div>
-    <div id="verslag-body" contenteditable="true"></div>
+    <div class="sec-label" style="display:flex;align-items:center;gap:10px">
+      <span>Verslag</span>
+      <button id="btn-verslag-edit" class="no-print">Bewerken</button>
+    </div>
+    <div id="verslag-view"></div>
+    <textarea id="verslag-edit" class="no-print" hidden></textarea>
     <div class="verslag-meta no-print" id="verslag-meta"></div>
   </section>
 </div>
@@ -266,34 +280,101 @@ function initRegio() {
     render();
   });
 }
+// Compacte Markdown→HTML-renderer (koppen, vet, lijsten, code, alinea's).
+// Bewust geen externe library — strikte CSP + two-file-app zonder dependencies.
+// Geen losse-* cursief: dat verminkt gewone tekst met losse asterisken (bv. "2 * 3").
+function mdInline(s) {
+  return esc(s)
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>');
+}
+function mdToHtml(md) {
+  let html = '', list = null, para = [];
+  const closeList = () => { if (list) { html += `</${list}>`; list = null; } };
+  const flushPara = () => { if (para.length) { html += `<p>${mdInline(para.join(' '))}</p>`; para = []; } };
+  for (const raw of String(md || '').split('\n')) {
+    const line = raw.trimEnd();
+    const h = line.match(/^(#{1,4})\s+(.*)$/);
+    const ul = line.match(/^[-*]\s+(.*)$/);
+    const ol = line.match(/^\d+\.\s+(.*)$/);
+    if (h) { flushPara(); closeList(); const n = h[1].length; html += `<h${n}>${mdInline(h[2])}</h${n}>`; }
+    else if (ul) { flushPara(); if (list !== 'ul') { closeList(); html += '<ul>'; list = 'ul'; } html += `<li>${mdInline(ul[1])}</li>`; }
+    else if (ol) { flushPara(); if (list !== 'ol') { closeList(); html += '<ol>'; list = 'ol'; } html += `<li>${mdInline(ol[1])}</li>`; }
+    else if (line === '') { flushPara(); closeList(); }
+    else { if (list) closeList(); para.push(line); }
+  }
+  flushPara(); closeList();
+  return html;
+}
+
+let verslagMd = '';   // ruwe markdown — bron van waarheid
+function renderVerslagView() {
+  const view = document.getElementById('verslag-view');
+  if (verslagMd && verslagMd.trim()) view.innerHTML = mdToHtml(verslagMd);
+  else view.innerHTML = '<span class="empty">Nog geen verslag. Klik "Verslag genereren".</span>';
+}
 function initVerslag() {
-  const body = document.getElementById('verslag-body');
   const saved = localStorage.getItem(VERSLAG_KEY);
-  if (saved != null) body.textContent = saved;
-  else body.innerHTML = '<span class="empty">Nog geen verslag. Klik "Verslag genereren".</span>';
-  body.addEventListener('input', () => localStorage.setItem(VERSLAG_KEY, body.innerText));
+  verslagMd = saved != null ? saved : '';
+  renderVerslagView();
   document.getElementById('btn-verslag').addEventListener('click', generateVerslag);
+  document.getElementById('btn-verslag-edit').addEventListener('click', toggleEdit);
+  // Continu opslaan tijdens bewerken — geen verlies bij tab-sluiten zonder "Klaar".
+  document.getElementById('verslag-edit').addEventListener('input', e => {
+    verslagMd = e.target.value;
+    localStorage.setItem(VERSLAG_KEY, verslagMd);
+  });
   updateVerslagMeta();
+}
+// Verlaat bewerk-modus: tekst is al opgeslagen (input-listener), toon de gerenderde view.
+function exitEditMode() {
+  const ta = document.getElementById('verslag-edit');
+  if (ta.hidden) return;
+  ta.hidden = true;
+  document.getElementById('verslag-view').hidden = false;
+  document.getElementById('btn-verslag-edit').textContent = 'Bewerken';
+  renderVerslagView();
+}
+function toggleEdit() {
+  const view = document.getElementById('verslag-view');
+  const ta = document.getElementById('verslag-edit');
+  const btn = document.getElementById('btn-verslag-edit');
+  if (ta.hidden) {
+    ta.value = verslagMd;
+    ta.hidden = false; view.hidden = true; btn.textContent = 'Klaar';
+    ta.focus();
+  } else {
+    exitEditMode();
+    updateVerslagMeta();
+  }
 }
 function updateVerslagMeta() {
   const meta = document.getElementById('verslag-meta');
   if (localStorage.getItem(VERSLAG_KEY) != null) meta.textContent = 'Lokaal bewerkbaar — wijzigingen blijven in je browser bewaard.';
 }
 async function generateVerslag() {
-  const body = document.getElementById('verslag-body');
+  const btn = document.getElementById('btn-verslag');
+  const view = document.getElementById('verslag-view');
   const meta = document.getElementById('verslag-meta');
-  const existing = localStorage.getItem(VERSLAG_KEY);
-  if (existing && existing.trim() && !confirm('Bestaand (bewerkt) verslag overschrijven met een verse versie?')) return;
+  if (verslagMd && verslagMd.trim() && !confirm('Bestaand (bewerkt) verslag overschrijven met een verse versie?')) return;
+  exitEditMode(); // verlaat bewerk-modus zodat de verse versie zichtbaar wordt
+  const origLabel = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Bezig…';
+  view.innerHTML = '<span class="empty">Verslag wordt gegenereerd…</span>';
   meta.textContent = 'Bezig met genereren…';
   try {
     const res = await fetch('/admin/verslag', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
     const out = await res.json();
     if (!out.ok) throw new Error(out.error || 'mislukt');
-    body.textContent = out.verslag;
-    localStorage.setItem(VERSLAG_KEY, out.verslag);
+    verslagMd = out.verslag;
+    localStorage.setItem(VERSLAG_KEY, verslagMd);
+    renderVerslagView();
     meta.textContent = out.fallback ? 'Getemplate samenvatting (geen AI-sleutel ingesteld).' : `Gegenereerd met ${out.model}.`;
   } catch (e) {
+    renderVerslagView();
     meta.textContent = 'Genereren mislukt: ' + e.message;
+  } finally {
+    btn.disabled = false; btn.textContent = origLabel;
   }
 }
 
@@ -310,7 +391,7 @@ function initFilters() {
   document.getElementById('f-rol').addEventListener('change', e => { filters.rol = e.target.value; render(); });
 }
 
-document.getElementById('btn-print').addEventListener('click', () => window.print());
+document.getElementById('btn-print').addEventListener('click', () => { exitEditMode(); window.print(); });
 
 initFilters();
 initRegio();

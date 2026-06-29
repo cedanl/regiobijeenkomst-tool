@@ -208,14 +208,38 @@ test('verslag genereren vult het veld en bewaart lokaal; bewerken persisteert', 
     page.waitForResponse(r => r.url().includes('/admin/verslag') && r.request().method() === 'POST' && r.ok()),
     page.locator('#btn-verslag').click(),
   ]);
-  const body = page.locator('#verslag-body');
-  await expect(body).toContainText('Studievoortgang');
+  const view = page.locator('#verslag-view');
+  await expect(view).toContainText('Studievoortgang');
+  // Markdown wordt gerenderd, niet als platte tekst getoond.
+  await expect(view.locator('h2, h3')).not.toHaveCount(0);
   await expect(page.locator('#verslag-meta')).toContainText('samenvatting'); // fallback-melding
   const stored = await page.evaluate(() => localStorage.getItem('ceda-analyse-verslag'));
   expect(stored).toContain('Studievoortgang');
 
-  // Bewerken persisteert naar localStorage.
-  await body.click();
+  // Bewerken via de toggle: ruwe markdown aanpassen → opslaan → persisteert naar localStorage.
+  await page.locator('#btn-verslag-edit').click();
+  const edit = page.locator('#verslag-edit');
+  await expect(edit).toBeVisible();
+  await edit.focus();
   await page.keyboard.type(' EXTRA');
+  await page.locator('#btn-verslag-edit').click(); // "Klaar" → opslaan
   await expect.poll(() => page.evaluate(() => localStorage.getItem('ceda-analyse-verslag'))).toContain('EXTRA');
+});
+
+test('Opslaan als PDF verlaat eerst bewerk-modus (anders blanco verslag in de PDF)', async ({ page }) => {
+  await page.goto(`${base}/admin/analyse`);
+  await Promise.all([
+    page.waitForResponse(r => r.url().includes('/admin/verslag') && r.request().method() === 'POST' && r.ok()),
+    page.locator('#btn-verslag').click(),
+  ]);
+  // Ga naar bewerk-modus: view verborgen, textarea zichtbaar.
+  await page.locator('#btn-verslag-edit').click();
+  await expect(page.locator('#verslag-edit')).toBeVisible();
+  await expect(page.locator('#verslag-view')).toBeHidden();
+  // Print-dialoog stubben zodat de klik niet blokkeert.
+  await page.evaluate(() => { window.print = () => {}; });
+  await page.locator('#btn-print').click();
+  // Print-knop moet de gerenderde view terugzetten, anders mist het verslag in de PDF.
+  await expect(page.locator('#verslag-view')).toBeVisible();
+  await expect(page.locator('#verslag-edit')).toBeHidden();
 });

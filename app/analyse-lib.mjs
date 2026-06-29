@@ -145,9 +145,11 @@ export function aggregate(rooms, regios) {
 export function buildVerslagPrompt(data) {
   const { kpis, insights, useCases } = data;
   const lines = [];
-  lines.push('Je bent beleidsadviseur. Schrijf een bondig managementverslag van maximaal één A4 in het Nederlands, op basis van onderstaande data uit vier regiobijeenkomsten over datagedreven werken in het onderwijs.');
+  lines.push('Je bent beleidsadviseur. Schrijf een helder, goed onderbouwd managementverslag in het Nederlands, op basis van onderstaande data uit vier regiobijeenkomsten over datagedreven werken in het onderwijs. Neem de ruimte die de inhoud vraagt; een grondig verslag mag meerdere pagina\'s beslaan.');
   lines.push('');
-  lines.push('Structuur: (1) korte inleiding/context, (2) de belangrijkste behoeften en patronen, (3) advies over welke 2 à 3 use cases zich het best lenen voor co-creatie en waarom. Lopende tekst met enkele koppen; geen opsomming van alle ruwe data.');
+  lines.push('Structuur: (1) inleiding/context, (2) de belangrijkste behoeften en patronen per rol en regio, (3) advies over welke 2 à 3 use cases zich het best lenen voor co-creatie en waarom, (4) een korte afsluiting met vervolgstappen. Lopende tekst onderbouwd met voorbeelden uit de data; geen kale opsomming van alle ruwe regels.');
+  lines.push('');
+  lines.push('Opmaak: gebruik Markdown — koppen met ## en ###, **vetgedrukte** kernpunten en opsommingen (- ) waar dat de leesbaarheid helpt.');
   lines.push('');
   lines.push(`Kerncijfers: ${kpis.regios} regio's, ${kpis.inzichten} inzichten, ${kpis.stemmen} stemmen, ${kpis.deelnemers} deelnemers.`);
   lines.push('');
@@ -166,14 +168,14 @@ export function buildFallbackVerslag(data) {
   const topI = insights.slice(0, 8).map(i => `- ${i.tekst} (${i.regio}, ${i.type}, ${i.totaalStemmen} stemmen)`).join('\n');
   const topU = useCases.slice(0, 8).map(u => `- ${u.tekst} — ${u.doel} (${u.regio}, ${u.totaalStemmen} stemmen)`).join('\n');
   return [
-    'Samenvatting regio-analyse',
+    '## Samenvatting regio-analyse',
     '',
     `${kpis.regios} regio's · ${kpis.inzichten} inzichten · ${kpis.stemmen} stemmen · ${kpis.deelnemers} deelnemers.`,
     '',
-    'Belangrijkste behoeften:',
+    '### Belangrijkste behoeften',
     topI || '- (geen)',
     '',
-    'Use cases (op prioriteit):',
+    '### Use cases (op prioriteit)',
     topU || '- (geen)',
   ].join('\n');
 }
