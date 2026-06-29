@@ -120,9 +120,11 @@ fly ssh console -C "tar -C /data/recaps -czf - ." > recaps-$(date +%F).tgz
 Op `https://<host>/admin/analyse` (zelfde inlog als de recaps-pagina) staan de
 vier regio's gebundeld in twee overzichten — kansen & inzichten naar prioriteit,
 en de use cases als kaarten om samen 2–3 co-creatie-kandidaten te kiezen — plus
-een bewerkbaar 1-A4 verslag. Het verslag wordt opgesteld door Claude
-(`claude-opus-4-8`) wanneer de Fly-secret `ANTHROPIC_API_KEY` is gezet; zonder
-sleutel verschijnt een feitelijke samenvatting. Exporteer via "Opslaan als PDF".
+een bewerkbaar verslag (als Markdown weergegeven; lengte naar inhoud, geen
+1-A4-limiet). Het verslag wordt opgesteld door Claude (`claude-opus-4-8`)
+wanneer de Fly-secret `ANTHROPIC_API_KEY` is gezet; zonder sleutel verschijnt
+een feitelijke samenvatting. Met "Bewerken" pas je de ruwe tekst aan; exporteer
+via "Opslaan als PDF".
 
 Sessiecodes koppel je aan regionamen via "Regio's beheren" (opgeslagen in
 `<RECAP_DIR>/regios.json`). Nieuwe sleutel zetten:
