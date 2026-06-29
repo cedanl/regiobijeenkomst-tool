@@ -9,7 +9,7 @@ WORKDIR /app
 COPY --chown=node:node app/package.json app/package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 
-COPY --chown=node:node app/server.js app/ceda-workshop.html ./
+COPY --chown=node:node app/server.js app/analyse-lib.mjs app/ceda-workshop.html app/analyse.html ./
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
